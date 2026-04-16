@@ -19,3 +19,19 @@ async def get_categories(category_id:Annotated[int, Query(description="新闻类
         raise HTTPException(status_code=404,detail="类型id不存在")
 
     return result
+
+@router.get("/list")
+async def get_news(
+        category_id: int =Query(...,description="新闻类型id",alias="categoryId"),
+        page:int=1,
+        pagesize:int=Query(10,description="每页新闻数量",alias="pageSize"),
+        db:AsyncSession = Depends(get_db)):
+    return {
+        "code":200,
+        "message":"ok",
+        "data":{
+            "list":"新闻响应列表",
+            "total":"",
+            "hasMore":None
+        }
+    }
