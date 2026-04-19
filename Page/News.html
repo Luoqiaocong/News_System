@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻系统 - 预览版</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none; }
+        .news-content { line-height: 1.8; white-space: pre-wrap; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+<div id="app" v-cloak class="max-w-6xl w-full mx-auto p-2 md:p-4 flex-grow">
+
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-blue-700 cursor-pointer" @click="goHome">新闻门户系统</h1>
+    </header>
+
+    <nav class="flex gap-3 mb-8 overflow-x-auto no-scrollbar border-b pb-4">
+        <button
+            v-for="cat in categories"
+            :key="cat.id"
+            @click="fetchNewsByCategory(cat.id)"
+            :class="['whitespace-nowrap px-5 py-2 rounded-full transition',
+                     activeCat === cat.id ? 'bg-blue-600 text-white' : 'bg-white border hover:border-blue-400']"
+        >
+            {{ cat.name }}
+        </button>
+    </nav>
+
+    <main v-if="view === 'list'">
+        <div v-if="newsList.length === 0" class="text-gray-400 text-center py-20">
+            该分类下暂无新闻内容
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div
+                v-for="item in newsList"
+                :key="item.id"
+                @click="setPreviousNewsId(null); getDetail(item.id)"
+                class="bg-white rounded-lg shadow-sm hover:shadow-md cursor-pointer border border-transparent hover:border-blue-200 transition-all duration-300 overflow-hidden flex flex-col"
+            >
+                <div class="relative">
+                    <img :src="item.thumbnail" :alt="item.title" class="w-full h-44 object-cover rounded-t-lg">
+                </div>
+                <div class="p-3 flex flex-col">
+                    <h2 class="text-sm font-bold mb-2 text-gray-900 line-clamp-2">{{ item.title }}</h2>
+                    <div class="flex justify-between items-center text-xs text-gray-600">
+                        <span>{{ item.author }}</span>
+                        <span>{{ item.publish_time }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分页组件 -->
+        <div v-if="totalPages > 1" class="mt-10 flex justify-center">
+            <div class="flex items-center gap-2">
+                <button 
+                    @click="changePage(currentPage - 1)" 
+                    :disabled="currentPage === 1"
+                    class="px-4 py-2 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    上一页
+                </button>
+                <span class="px-4 py-2">
+                    {{ currentPage }} / {{ totalPages }}
+                </span>
+                <button 
+                    @click="changePage(currentPage + 1)" 
+                    :disabled="currentPage === totalPages"
+                    class="px-4 py-2 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    下一页
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 键盘提示浮动框 -->
+    <div v-if="showKeyboardHint && view === 'detail' && previousNewsId" class="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg max-w-xs z-50 animate-fade-in">
+        <div class="flex items-start justify-between">
+            <div>
+                <h3 class="font-bold mb-2">键盘导航提示</h3>
+                <p class="text-sm">您可以使用 <kbd class="bg-blue-800 px-2 py-1 rounded text-xs">←</kbd> 或 <kbd class="bg-blue-800 px-2 py-1 rounded text-xs">Backspace</kbd> 键返回上一条新闻</p>
+            </div>
+            <button @click="closeKeyboardHint" class="text-white hover:text-gray-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <main v-if="view === 'detail'" class="animate-in fade-in duration-500">
+        <div class="flex items-center justify-between mb-6">
+            <button @click="view = 'list'" class="flex items-center text-blue-600 hover:underline">
+                ← 返回新闻列表
+            </button>
+            <button v-if="previousNewsId" @click="getDetail(previousNewsId)" class="flex items-center text-blue-600 hover:underline">
+                上一条新闻 →
+            </button>
+        </div>
+
+        <article class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border mb-10 w-full md:w-[70%] mx-auto">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-6 text-gray-900 leading-tight text-center">{{ detail.title }}</h1>
+
+            <div class="mb-8 text-center">
+                <img :src="detail.thumbnail" :alt="detail.title" class="w-full max-h-96 object-cover rounded-lg mb-6 shadow-md mx-auto">
+            </div>
+
+            <div class="bg-blue-50 p-4 rounded-lg flex flex-wrap justify-around items-center mb-8 text-sm">
+                <div class="flex items-center mx-4 my-2">
+                    <span class="text-blue-400 font-medium mr-2">作者:</span>
+                    <span class="text-blue-900">{{ detail.author }}</span>
+                </div>
+                <div class="flex items-center mx-4 my-2">
+                    <span class="text-blue-400 font-medium mr-2">发布时间:</span>
+                    <span class="text-blue-900">{{ detail.publish_time }}</span>
+                </div>
+                <div class="flex items-center mx-4 my-2">
+                    <span class="text-blue-400 font-medium mr-2">浏览量:</span>
+                    <span class="text-blue-900">{{ detail.views }}</span>
+                </div>
+            </div>
+
+            <div class="news-content text-gray-700 text-lg mb-6">
+                {{ detail.content }}
+            </div>
+
+            <div class="text-gray-500 text-sm">
+                <span>摘要: {{ detail.summary }}</span>
+            </div>
+        </article>
+
+        <section class="w-full md:w-[70%] mx-auto border-t pt-8">
+            <h3 class="text-xl font-bold mb-6 flex items-center">
+                <span class="w-1 h-6 bg-blue-600 mr-2 rounded"></span>
+                相关新闻推荐
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div
+                    v-for="rec in recommendations"
+                    :key="rec.id"
+                    @click="setPreviousNewsId(detail.id); getDetail(rec.id)"
+                    class="p-3 bg-white border rounded-lg hover:bg-blue-50 cursor-pointer transition flex flex-col"
+                >
+                    <img :src="rec.thumbnail" :alt="rec.title" class="w-full h-32 object-cover rounded-lg mb-3">
+                    <h4 class="font-bold text-gray-800 mb-2">{{ rec.title }}</h4>
+                    <p class="text-gray-600 text-xs mb-2">{{ rec.summary }}</p>
+                    <div class="flex justify-between items-center text-xs text-gray-500 mt-auto">
+                        <span>{{ rec.author }}</span>
+                        <span>{{ rec.views }} 浏览</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+    createApp({
+        setup() {
+            // --- 状态数据 ---
+            const view = ref('list'); // 视图控制：list 或 detail
+            const categories = ref([]);
+            const newsList = ref([]);
+            const detail = ref({});
+            const recommendations = ref([]);
+            const activeCat = ref(null);
+            const currentPage = ref(1);
+            const pageSize = ref(5);
+            const totalPages = ref(1);
+            const previousNewsId = ref(null);
+            const showKeyboardHint = ref(true);
+
+            // --- 接口对接逻辑 ---
+
+            // 1. 获取分类
+            const fetchCategories = async () => {
+                // 实际调用：const res = await fetch('你的接口地址/categories');
+                const res = await fetch("http://localhost:8000/api/news/categories");
+                const data = await res.json();
+                categories.value = data;
+                if(data.length > 0) fetchNewsByCategory(data[0].id);
+            };
+
+            const fetchNewsByCategory = async (id, page = 1) => {
+                // 1. 记录当前点击的分类 ID（让 UI 上的按钮变色）
+                activeCat.value = id;
+                currentPage.value = page;
+
+                // 2. 确保切换回列表视图（万一用户当前在详情页）
+                view.value = 'list';
+
+                console.log(`正在请求分类 ID 为 ${id} 的新闻列表，页码：${page}...`);
+
+                try {
+                    // 3. 发起请求：在 URL 后面拼接分类 ID 和分页参数
+                    const res = await fetch(`http://localhost:8000/api/news/list?categoryId=${id}&page=${page}&pageSize=${pageSize.value}`);
+
+                    if (!res.ok) throw new Error("获取新闻列表失败");
+
+                    const response = await res.json();
+                    const data = response['data']['list'];
+                    totalPages.value = Math.ceil(response['data']['total'] / pageSize.value);
+                    console.log(`服务器返回的数据:`, data);
+                    console.log(`总页数:`, totalPages.value);
+
+                    // 4. 将后端返回的新闻数组赋值给页面变量
+                    newsList.value = data;
+
+                    console.log(`分类 ${id} 的数据已加载，共 ${data.length} 条`);
+                } catch (error) {
+                    console.error("请求出错:", error);
+                    alert("无法连接到服务器，请检查后端是否启动");
+                }
+            };
+
+            // 3. 获取详情及推荐
+            const getDetail = async (id) => {
+                console.log(`正在请求 ID 为 ${id} 的详情数据...`);
+                const res = await fetch(`http://127.0.0.1:8000/api/news/detail?newsId=${id}`);
+                const data = await res.json();
+                const dataDetail = data['data'];
+                detail.value = dataDetail;
+
+                // 获取推荐 (通常请求同类别下的其他新闻)
+                recommendations.value = data['relatedNews'] || [];
+                view.value = 'detail';
+                window.scrollTo(0, 0);
+            };
+
+            // 关闭键盘提示
+            const closeKeyboardHint = () => {
+                showKeyboardHint.value = false;
+            };
+
+            const setPreviousNewsId = (id) => {
+                previousNewsId.value = id;
+            };
+
+
+
+            const goHome = () => {
+                if(categories.value.length > 0) fetchNewsByCategory(categories.value[0].id);
+            }
+
+            const changePage = (page) => {
+                if (page >= 1 && page <= totalPages.value) {
+                    fetchNewsByCategory(activeCat.value, page);
+                }
+            }
+
+            // --- 过滤器：排除字段 ---
+            const filteredFields = computed(() => {
+                const exclude = ['created_at', 'updated_at', 'content', 'title', 'id'];
+                const result = {};
+                for (let key in detail.value) {
+                    if (!exclude.includes(key)) {
+                        result[key] = detail.value[key];
+                    }
+                }
+                return result;
+            });
+
+            onMounted(() => {
+                fetchCategories();
+                // 重置提示状态，确保每次都显示
+                showKeyboardHint.value = true;
+                // 清除本地存储，确保每次都显示提示
+                localStorage.removeItem('keyboardHintClosed');
+                // 添加键盘事件监听器
+                window.addEventListener('keydown', handleKeyDown);
+            });
+
+            // 处理键盘事件
+            const handleKeyDown = (event) => {
+                // 按下后退键 (ArrowLeft) 或 Backspace 键返回上一条新闻
+                if ((event.key === 'ArrowLeft' || event.key === 'Backspace') && previousNewsId.value) {
+                    getDetail(previousNewsId.value);
+                }
+            };
+
+            // 组件卸载时移除事件监听器
+            onUnmounted(() => {
+                window.removeEventListener('keydown', handleKeyDown);
+            });
+
+            return {
+                view, categories, newsList, detail, recommendations, activeCat,
+                currentPage, totalPages, pageSize, previousNewsId, showKeyboardHint,
+                fetchNewsByCategory, getDetail, filteredFields, goHome, changePage, setPreviousNewsId, closeKeyboardHint
+            };
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
