@@ -10,17 +10,11 @@ from sqlalchemy.sql.sqltypes import Text
 class Base(DeclarativeBase):
     pass
 
-class TimeStamp(Base):
-    __abstract__ = True  # 这只是一张公共字段类
-    create_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, comment="创建时间")
-    update_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now,
-                                                comment="修改时间")
 
 class Category(Base):
     __tablename__="categories"  # 表名
     id:Mapped[int] = mapped_column(Integer,primary_key=True,autoincrement=True,comment="新闻类型ID")
     name:Mapped[str] = mapped_column(String(255),nullable=False,comment="新闻类型名称")
-    description:Mapped[str] = mapped_column(String,nullable=False,comment="新闻类型描述")
 
 class News(Base):
     __tablename__="news"
