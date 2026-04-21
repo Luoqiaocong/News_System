@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, DateTime, text, Index
+from sqlalchemy import String, DateTime,  Index, Integer, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -19,7 +19,6 @@ class User(TimeStamp):
 
     __table_args__ = (
         Index("idx_user_name", "username", unique=True),
-        Index("idx_token", "token"),
     )
     # id: 主键自增
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="用户ID")
@@ -33,13 +32,6 @@ class User(TimeStamp):
     # nickname: 不可为空
     nickname: Mapped[str] = mapped_column(
         String(255) ,default="未命名用户",comment="昵称"
-    )
-
-    # token: 可为空,默认值为空字符串
-    token: Mapped[Optional[str]] = mapped_column(
-        String(500),
-        nullable=True,
-        comment="登录凭证Token"
     )
 
     # avatar: 不可为空,默认头像
@@ -59,3 +51,14 @@ class User(TimeStamp):
 
     def __repr__(self):
         return f"<User(username='{self.username}',nickname='{self.nickname}')>"
+
+
+class UserToken(Base):
+    __tablename__ = "user_token"
+
+    id:Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="登录凭证ID")
+    user_id:Mapped[int] = mapped_column(Integer, ForeignKey("users.id"),nullable=False, comment="用户ID")
+    token: Mapped[str] = mapped_column(String(255), nullable=False, comment="登录凭证Token")
+    expire_at:Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="过期时间")
+    created_at:Mapped[datetime] = mapped_column(DateTime, default=datetime.now, comment="创建时间")
+
