@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from Config.settings import get_db
-from Schemas.UsersSchema import UserRequest
-from Schemas.UsersSchema import UserResponse
+from Schemas.UsersSchema import UserInfo, UserRequest,UserAuthResponse
 from CRUD import UsersCRUD
-from Utils.response import success
+from Utils.response import success_response
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -17,29 +16,18 @@ async def register(userdata: UserRequest, db: AsyncSession = Depends(get_db)):
     user = await UsersCRUD.create_user(db, userdata)
     token = await UsersCRUD.create_token(db, user.id)
 
-    userData = UserResponse(
-        username=user.username,
-        nickname=user.nickname,
-        avatar=user.avatar,
-        bio=user.bio,
-        token=token
-    )
+    account_info = UserAuthResponse(token=token,userInfo=UserInfo.model_validate(user))
 
-    return success(msg="注册成功", data=userData)
+    return success_response(message="注册成功", data=account_info)
 
 
 @router.post("/login")
-async def login_user(userdata: UserRequest, db: AsyncSession = Depends(get_db)):
+async def login(userdata: UserRequest, db: AsyncSession = Depends(get_db)):
     user = await UsersCRUD.verify_user(db, userdata)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或者密码错误！")
 
 
-    userData = UserResponse(
-        username=user.username,
-        nickname=user.nickname,
-        avatar=user.avatar,
-        bio=user.bio,
-    )
+    account_info = UserAuthResponse(userInfo=UserInfo.model_validate(user))
 
-    return success(msg="登录成功", data=userData)
+    return success_response(message="登录成功", data=account_info)

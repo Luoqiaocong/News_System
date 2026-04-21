@@ -1,14 +1,26 @@
 # Utils/response.py
-from Schemas.Response import BaseResponse
-from typing import Any, Optional, Dict, List, Union
 
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
-def success(data: Optional[Any] = None, msg: str = "success", code: int = 200) -> BaseResponse:
-    """成功响应"""
-    return BaseResponse(code=code, msg=msg, data=data)
+"""
+exclude_none=True 排除 None 值
 
+"""
 
-def error(msg: str, code: int = 400, data: Optional[Any] = None) -> BaseResponse:
-    """错误响应"""
-    return BaseResponse(code=code, msg=msg, data=data)
+def success_response(code=200, message="Success", data=None):
+    content= {
+        "code": code,
+        "message": message,
+        "data": data
+    }
 
+    return JSONResponse(content=jsonable_encoder(content, exclude_none=True))  
+def error_response(code=400, message="Error", data=None):
+    content= {
+        "code": code,
+        "message": message,
+        "data": data
+    }
+
+    return JSONResponse(content=jsonable_encoder(content, exclude_none=True))
