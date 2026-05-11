@@ -399,8 +399,8 @@
                 // 实际调用：const res = await fetch('你的接口地址/categories');
                 const res = await fetch("http://localhost:8000/api/news/categories");
                 const data = await res.json();
-                categories.value = data;
-                if(data.length > 0) fetchNewsByCategory(data[0].id);
+                categories.value = data.data || [];
+                if(categories.value.length > 0) fetchNewsByCategory(categories.value[0].id);
             };
 
             const fetchNewsByCategory = async (id, page = 1) => {
@@ -420,13 +420,15 @@
                     if (!res.ok) throw new Error("获取新闻列表失败");
 
                     const response = await res.json();
-                    const data = response['data']['list'];
-                    totalPages.value = Math.ceil(response['data']['total'] / pageSize.value);
-                    console.log(`服务器返回的数据:`, data);
+                    const data = response.data || {};
+                    const newsData = data.news_list || [];
+                    const total = data.total || 0;
+                    totalPages.value = Math.ceil(total / pageSize.value);
+                    console.log(`服务器返回的数据:`, newsData);
                     console.log(`总页数:`, totalPages.value);
 
                     // 4. 将后端返回的新闻数组赋值给页面变量
-                    newsList.value = data;
+                    newsList.value = newsData;
 
                     console.log(`分类 ${id} 的数据已加载，共 ${data.length} 条`);
                 } catch (error) {
@@ -438,13 +440,13 @@
             // 3. 获取详情及推荐
             const getDetail = async (id) => {
                 console.log(`正在请求 ID 为 ${id} 的详情数据...`);
-                const res = await fetch(`http://127.0.0.1:8000/api/news/detail?newsId=${id}`);
+                const res = await fetch(`http://127.0.0.1:8000/api/news/detail/${id}`);
                 const data = await res.json();
-                const dataDetail = data['data'];
-                detail.value = dataDetail;
+                const dataDetail = data.data || {};
+                detail.value = dataDetail.detail || {};
 
                 // 获取推荐 (通常请求同类别下的其他新闻)
-                recommendations.value = data['relatedNews'] || [];
+                recommendations.value = dataDetail.related_news || [];
                 view.value = 'detail';
                 window.scrollTo(0, 0);
                 
@@ -474,14 +476,15 @@
                     
                     const data = await res.json();
                     if (data.code === 200) {
-                        localStorage.setItem('token', data.data.token);
-                        localStorage.setItem('user', JSON.stringify(data.data));
+                        const userData = data.data || {};
+                        localStorage.setItem('token', userData.token);
+                        localStorage.setItem('user', JSON.stringify(userData));
                         isLoggedIn.value = true;
-                        currentUser.value = data.data;
+                        currentUser.value = userData;
                         showLoginModal.value = false;
                         alert('登录成功');
                     } else {
-                        throw new Error(data.msg || '登录失败');
+                        throw new Error(data.message || '登录失败');
                     }
                 } catch (error) {
                     console.error('登录出错:', error);
@@ -510,14 +513,15 @@
                     
                     const data = await res.json();
                     if (data.code === 200) {
-                        localStorage.setItem('token', data.data.token);
-                        localStorage.setItem('user', JSON.stringify(data.data));
+                        const userData = data.data || {};
+                        localStorage.setItem('token', userData.token);
+                        localStorage.setItem('user', JSON.stringify(userData));
                         isLoggedIn.value = true;
-                        currentUser.value = data.data;
+                        currentUser.value = userData;
                         showRegisterModal.value = false;
                         alert('注册成功');
                     } else {
-                        throw new Error(data.msg || '注册失败');
+                        throw new Error(data.message || '注册失败');
                     }
                 } catch (error) {
                     console.error('注册出错:', error);
@@ -568,7 +572,7 @@
                         showProfileModal.value = false;
                         alert('个人资料更新成功');
                     } else {
-                        throw new Error(data.msg || '更新失败');
+                        throw new Error(data.message || '更新失败');
                     }
                 } catch (error) {
                     console.error('更新个人资料出错:', error);
@@ -582,7 +586,7 @@
                     const res = await fetch(`http://localhost:8000/api/news/comments?newsId=${newsId}`);
                     if (!res.ok) throw new Error('获取评论失败');
                     const data = await res.json();
-                    comments.value = data;
+                    comments.value = data.data || [];
                 } catch (error) {
                     console.error('加载评论出错:', error);
                     comments.value = [];
@@ -618,7 +622,7 @@
                         await loadComments(detail.value.id);
                         alert('评论成功');
                     } else {
-                        throw new Error(data.msg || '评论失败');
+                        throw new Error(data.message || '评论失败');
                     }
                 } catch (error) {
                     console.error('提交评论出错:', error);
@@ -645,7 +649,7 @@
                         await loadComments(detail.value.id);
                         alert('评论已删除');
                     } else {
-                        throw new Error(data.msg || '删除评论失败');
+                        throw new Error(data.message || '删除评论失败');
                     }
                 } catch (error) {
                     console.error('删除评论出错:', error);
@@ -670,7 +674,7 @@
                     if (!res.ok) throw new Error('检查收藏状态失败');
                     
                     const data = await res.json();
-                    isFavorite.value = data.is_favorite;
+                    isFavorite.value = data.data?.is_favorite || false;
                 } catch (error) {
                     console.error('检查收藏状态出错:', error);
                     isFavorite.value = false;
@@ -703,7 +707,7 @@
                         isFavorite.value = !isFavorite.value;
                         alert(isFavorite.value ? '收藏成功' : '取消收藏成功');
                     } else {
-                        throw new Error(data.msg || '操作失败');
+                        throw new Error(data.message || '操作失败');
                     }
                 } catch (error) {
                     console.error('切换收藏状态出错:', error);
