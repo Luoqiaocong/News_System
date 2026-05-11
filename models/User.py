@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import String, DateTime,  Index, Integer, ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import  Mapped, mapped_column
 
 
-class Base(DeclarativeBase):
-    pass
+from Config.DataBaseConfig import Base
 
 class TimeStamp(Base):
     __abstract__ = True  # 这只是一张公共字段类
@@ -13,26 +12,24 @@ class TimeStamp(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now,
                                                 comment="修改时间")
 
-
+# alter table user add column is_delete bool default FALSE,add column delete_time DATETIME default NULL;  软删除时添加
 class User(TimeStamp):
-    __tablename__ = "users"
+    __tablename__ = "user"
 
     __table_args__ = (
-        Index("idx_user_name", "username", unique=True),
+        Index("idx_email", "email", unique=True),
     )
     # id: 主键自增
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="用户ID")
 
-    # username: 不可为空，唯一
-    username: Mapped[str] = mapped_column(String(50), nullable=False, comment="用户名")
+    # email: 不可为空，唯一
+    email: Mapped[str] = mapped_column(String(50), nullable=False, comment="用户邮箱")
 
     # password: 不可为空
-    password: Mapped[str] = mapped_column(String(255), nullable=False, comment="哈希密码")
+    password: Mapped[str] = mapped_column(String(255), nullable=False, comment="密码")
 
     # nickname: 不可为空
-    nickname: Mapped[str] = mapped_column(
-        String(255) ,default="未命名用户",comment="昵称"
-    )
+    nickname: Mapped[str] = mapped_column(String(255) ,default="Seven用户",comment="昵称")
 
     # avatar: 不可为空,默认头像
     avatar: Mapped[str] = mapped_column(
@@ -48,16 +45,21 @@ class User(TimeStamp):
         comment="个人简介"
     )
 
+    token: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="登录凭证"
+    )
 
     def __repr__(self):
-        return f"<User(username='{self.username}',nickname='{self.nickname}')>"
+        return None
 
 
 class UserToken(Base):
     __tablename__ = "user_token"
 
     id:Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="登录凭证ID")
-    user_id:Mapped[int] = mapped_column(Integer, ForeignKey("users.id"),nullable=False, comment="用户ID")
+    user_id:Mapped[int] = mapped_column(Integer, ForeignKey("user.id", ondelete="CASCADE"),nullable=False, comment="用户ID")
     token: Mapped[str] = mapped_column(String(255), nullable=False, comment="登录凭证Token")
     expire_at:Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="过期时间")
     created_at:Mapped[datetime] = mapped_column(DateTime, default=datetime.now, comment="创建时间")

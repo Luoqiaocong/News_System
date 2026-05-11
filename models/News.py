@@ -3,12 +3,11 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import DateTime, Integer, String, Index, ForeignKey
-from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column
+from sqlalchemy.orm import Mapped,mapped_column
 from sqlalchemy.sql.sqltypes import Text
 
 
-class Base(DeclarativeBase):
-    pass
+from Config.DataBaseConfig import Base
 
 
 class Category(Base):

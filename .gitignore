@@ -8,3 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+.env
+
+# 日志文件 (根据你的目录结构)
+logs/
+*.log
+
+# PyCharm / VSCode 配置文件
+.idea/
+.vscode/
