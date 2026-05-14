@@ -1,16 +1,22 @@
+from fastapi import Depends
 from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from starlette import status
 
-from Repo.NewsRepo import get_news_detail
+from Config.DataBaseConfig import get_db
+from Repo import NewsRepo
 from Exception.BusinessException import UserFavoriteException
 from models.News import News
 from models.UserNewsFavorite import UserFavorite
 
 
+class UserFavoriteRepo:
+    def __init__(self, db: AsyncSession = Depends(get_db)):
+        self.db = db
+
 async def add_favorite(news_id:int,user_id:int,db:AsyncSession):
-    await get_news_detail(db,news_id)
+    await NewsRepo.get_news_detail(db,news_id)
     fav = UserFavorite(user_id = user_id,news_id=news_id)
     try:
         db.add(fav)

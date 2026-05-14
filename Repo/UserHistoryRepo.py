@@ -1,11 +1,17 @@
 from datetime import datetime
 
+from fastapi import Depends
 from sqlalchemy import update, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from Config.DataBaseConfig import get_db
 from models.News import News
 from models.UserNewsHistory import UserNewsHistory
 
+
+class UserHistoryRepo:
+    def __init__(self, db: AsyncSession = Depends(get_db)):
+        self.db = db
 
 async def add_view(news_id: int, user_id: int, db: AsyncSession):
     now = datetime.now()

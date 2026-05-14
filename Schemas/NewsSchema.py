@@ -26,3 +26,6 @@ class NewsData(BaseModel):
     summary: str
     content: Optional[str] = None
 
+class NewsListResponse(BaseModel):
+    news_list: List[NewsData]
+    total: int

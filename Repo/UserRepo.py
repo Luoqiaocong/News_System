@@ -30,8 +30,8 @@ class UserRepo:
         # 使用主键查询最快的方式
         return await self.db.get(User, user_id)
 
-    async def get_user_dynamic(self,id:int=None, email:str=None)-> User | None:
-        if id: return await self.db.get(User, id) # 这里警告是IDE误报，正常也是返回一个User对象
+    async def get_user_dynamic(self,user_id:int=None, email:str=None)-> User | None:
+        if user_id: return await self.db.get(User, user_id) # 这里警告是IDE误报，正常也是返回一个User对象
         if email:return await self._get_user_base(select(User).where(User.email == email))
         return None
 

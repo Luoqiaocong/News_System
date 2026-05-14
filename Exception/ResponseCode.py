@@ -62,6 +62,7 @@ class ResponseCode(Enum):
     NEWS_UPDATE_FAILED = (30003, "新闻更新失败")
     NEWS_DELETE_FAILED = (30004, "新闻删除失败")
     NEWS_PUBLISH_FAILED = (30005, "新闻发布失败")
+    NEWS_CATEGORY_NOT_FOUND = (30006, "新闻分类不存在")
 
     # ========== 收藏模块 (4xxxx) ==========
     FAVORITE_DUPLICATE = (40001, "您已收藏该新闻，请勿重复操作")

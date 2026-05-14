@@ -3,12 +3,11 @@ from typing import Annotated, Any
 
 from fastapi import Depends
 from pydantic import HttpUrl
-from pydantic.v1 import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from Config.DataBaseConfig import get_db
 from Exception import UserException, ResponseCode
-from Repo.UserRepo import UserRepo
+from Repo import UserRepo
 from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserInfo, UserProfileUpdate, \
     UserPwdAuth, UserPwdResetAuth
 from Utils import SecurityUtil
@@ -47,9 +46,9 @@ class UserService:
             await self.db.rollback()
             raise UserException(code=ResponseCode.DATABASE_ERROR)
 
-    async def _search_user(self, *, id: int = None, email: str = None) -> User:
+    async def _search_user(self, *, user_id: int = None, email: str = None) -> User:
         """验证用户是否存在（通过邮箱），存在则返回用户对象"""
-        user = await self.repo.get_user_dynamic(id=id, email=email)
+        user = await self.repo.get_user_dynamic(user_id=user_id, email=email)
         if not user:
             raise UserException(code=ResponseCode.USER_NOT_FOUND)
         return user
@@ -85,12 +84,12 @@ class UserService:
                 raise UserException(code=ResponseCode.USER_PASSWORD_ERROR)
 
             # 取得新token
-            new_token = create_access_token({"id": user.id})
+            new_token = create_access_token({"sub": SecurityUtil.get_hashed_id(user.id)})
             '''
-            事实上jwt是无状态的，可以不存数据库，但是如果要实现单点登录或者黑名单，就得使用Redis；
+            事实上jwt是无状态的，可以不存数据库，但是如果要实现黑名单，就得使用Redis；
             现在是为了调试，因为我客户端还没做
             如果需要存进Redis，也直接改repo层即可（但目前我觉得我这个系统可以不做）
-            
+        
             但是以后就使用无状态的jwt吗？这个不确定，可能得加自定义逻辑
             '''
             await self.repo.set_token(user.id, new_token)
