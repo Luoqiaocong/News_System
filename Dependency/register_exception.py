@@ -34,7 +34,7 @@ def register_exception(app: FastAPI):
             401: ResponseCode.UNAUTHORIZED,
             403: ResponseCode.FORBIDDEN,
             404: ResponseCode.NOT_FOUND,
-            413:ResponseCode.FILE_TOO_LARGE,
+            413: ResponseCode.FILE_TOO_LARGE,
             500: ResponseCode.INTERNAL_ERROR,
         }
 

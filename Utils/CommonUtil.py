@@ -5,7 +5,6 @@ import hashlib
 from Exception import  BaseBusinessException, ResponseCode
 from Utils.LogUtil import log
 
-
 async def calculate_md5(file: UploadFile):
     md5_hash = hashlib.md5()
     while chunk := await file.read(8192):
@@ -31,7 +30,7 @@ def handle_service_exception(
                 raise
             except Exception as e:
                 log.error(f"函数 {func.__name__} 发生未预期异常: {e}", exc_info=True)
-                raise BaseBusinessException(code=ResponseCode.INTERNAL_ERROR)
+                raise BaseBusinessException(code=ResponseCode.SERVER_ERROR)
         return wrapper
 
     return decorator

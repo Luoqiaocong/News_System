@@ -28,7 +28,7 @@ class ResponseCode(Enum):
     PARAM_INVALID = (10003, "参数格式不正确")
     FILE_TOO_LARGE = (10004, "文件大小超过限制")
     CODE_VERIFY_FAILED = (10005, "验证码验证失败")
-
+    SERVER_ERROR = (10006, "服务器开小差了，请稍后尝试")
 
 
     UNAUTHORIZED = (10101, "未授权，请先登录")
