@@ -36,18 +36,18 @@ async def upload_file(
     return file_url
 
 
-import asyncio
-import json
-import oss2
-from concurrent.futures import ThreadPoolExecutor
-from fastapi import UploadFile, HTTPException
-from starlette import status
-from Config.AliyunOssConfig import settings, bucket
-
-# 限制 5MB
-MAX_FILE_SIZE = 5 * 1024 * 1024
-# 线程池：专门给同步的 oss2 SDK 使用，防止阻塞 FastAPI 异步主线程
-executor = ThreadPoolExecutor(max_workers=20)
+# import asyncio
+# import json
+# import oss2
+# from concurrent.futures import ThreadPoolExecutor
+# from fastapi import UploadFile, HTTPException
+# from starlette import status
+# from Config.AliyunOssConfig import settings, bucket
+#
+# # 限制 5MB
+# MAX_FILE_SIZE = 5 * 1024 * 1024
+# # 线程池：专门给同步的 oss2 SDK 使用，防止阻塞 FastAPI 异步主线程
+# executor = ThreadPoolExecutor(max_workers=20)
 
 
 # class OSSManager:

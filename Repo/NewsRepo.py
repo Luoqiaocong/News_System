@@ -1,10 +1,13 @@
 from fastapi import Depends
+from oss2.defaults import request_retries
+from pydantic import BaseModel
 from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from Config.DataBaseConfig import get_db
 from Exception.BusinessException import NewsException
+from Schemas.NewsSchema import NewsData
 from models.News import Category, News
 
 class NewsRepo:
@@ -54,7 +57,7 @@ class NewsRepo:
         return news_result, count_result
 
 
-    async def get_news_detail(self,db: AsyncSession, news_id: int):
+    async def get_news_detail(self,news_id: int):
         """
         获取新闻详情。
 
@@ -65,14 +68,14 @@ class NewsRepo:
         """
         # 构建查询语句
         stmt = select(News).where(News.id == news_id)
-        result = (await db.execute(stmt)).scalar_one_or_none()
+        result = (await self.db.execute(stmt)).scalar_one_or_none()
 
         # 如果新闻不存在，抛出404异常
         if not result:
-            raise NewsException(status_code=404, msg="新闻不存在")
+            return None
 
         # 刷新对象以确保获取最新数据
-        await db.refresh(result)
+        await self.db.refresh(result)
 
         return result
 
@@ -97,7 +100,7 @@ class NewsRepo:
         return result.rowcount > 0
 
 
-    async def get_related_news(self,db: AsyncSession, news_id: int, category_id: int):
+    async def get_related_news(self,news_id: int, category_id: int):
         """
         获取与指定新闻同分类的相关新闻列表（随机选取6条）。
 
@@ -113,7 +116,7 @@ class NewsRepo:
             .order_by(func.rand())
             .limit(6)
         )
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
 
         # 将结果转换为字典列表返回
         return [

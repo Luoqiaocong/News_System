@@ -19,6 +19,7 @@ router = APIRouter(prefix="/api/news", tags=["新闻相关"],route_class=Unified
 @cbv(router)
 class NewsRouterAPI:
     service :NewsService = Depends()
+    current_user :UserInfo = Depends(JWTAuth.get_current_user_optional)
 
     @router.get("/categories",summary="获取新闻分类")
     async def get_categories(self,
@@ -38,18 +39,19 @@ class NewsRouterAPI:
 
     @router.get("/detail/{news_id}", summary="查看新闻详情")
     async def get_news_detail(self,
-            user: Annotated[UserInfo, Depends(JWTAuth.get_current_user_optional)], # 确认用户是否登录，登录了才会有浏览历史
             news_id: int = Path(..., description="新闻ID"),
-            db: AsyncSession = Depends(get_db),
     ):
-        news_detail = await NewsRepo.get_news_detail(db, news_id)
-
-        related_news = await NewsRepo.get_related_news(db, news_id, news_detail.category_id)
-
-        detail_data = NewsData.model_validate(news_detail)
-        related_data = [NewsData.model_validate(news) for news in related_news]
-
-        await NewsService.handle_news_view(db, news_id, user)   # 处理浏览量和浏览历史
-
-        return success_response(data={"detail": detail_data, "related_news": related_data})
+        return await self.service.get_news_detail(news_id) # 获取新闻详情及相关推荐新闻
+        await self.service.handle_news_view(news_id, self.current_user)   # 处理浏览量和浏览历史
+        pass
+        # news_detail = await NewsRepo.get_news_detail(db, news_id)
+        #
+        # related_news = await NewsRepo.get_related_news(db, news_id, news_detail.category_id)
+        #
+        # detail_data = NewsData.model_validate(news_detail)
+        # related_data = [NewsData.model_validate(news) for news in related_news]
+        #
+        # await NewsService.handle_news_view(db, news_id, user)   # 处理浏览量和浏览历史
+        #
+        # return success_response(data={"detail": detail_data, "related_news": related_data})
 
