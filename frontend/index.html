@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seven新闻</title>
+  <link rel="icon" href="img/news.ico" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- ========== Header ========== -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-logo" @click="goHome">
+          <span class="logo-icon">S</span>
+          <span>Seven新闻</span>
+        </div>
+        <div class="header-actions">
+          <template v-if="loggedIn">
+            <span class="header-nickname" @click="openProfile">
+              <span class="wave">👋</span>
+              {{ user.nickname || user.email?.split('@')[0] || '用户' }}
+            </span>
+            <img
+              :src="avatarSrc"
+              class="header-avatar"
+              @click="openProfile"
+              title="个人中心"
+              @error="e => e.target.src = 'https://via.placeholder.com/38'"
+            />
+            <button class="btn btn-ghost btn-sm" @click="doLogout">退出</button>
+          </template>
+          <template v-else>
+            <button class="btn btn-outline btn-sm" @click="showAuth('login')">登录</button>
+            <button class="btn btn-primary btn-sm" @click="showAuth('register')">注册</button>
+          </template>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========== Main Content ========== -->
+    <main class="container">
+      <div class="category-tabs">
+        <button class="category-tab" :class="{ active: currentCategoryId === null }" @click="selectCategory(null)">全部</button>
+        <button v-for="cat in categories" :key="cat.id" class="category-tab" :class="{ active: currentCategoryId === cat.id }" @click="selectCategory(cat.id)">{{ cat.name }}</button>
+      </div>
+
+      <div class="loading" v-if="loading"><span class="spinner"></span> 正在加载...</div>
+
+      <div class="news-grid" v-else-if="newsList.length > 0">
+        <div class="news-card" v-for="news in newsList" :key="news.id" @click="goDetail(news.id)">
+          <img v-if="news.thumbnail" :src="news.thumbnail" :alt="news.title" class="news-card-thumb" />
+          <div v-else class="news-card-thumb-placeholder">📰</div>
+          <div class="news-card-body">
+            <h3 class="news-card-title">{{ news.title }}</h3>
+            <p class="news-card-summary">{{ news.summary || '暂无摘要' }}</p>
+            <div class="news-card-meta">
+              <span class="author">{{ news.author }}</span>
+              <span>{{ news.views }} 阅读</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty" v-else>
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">暂无新闻数据</div>
+      </div>
+
+      <div class="pagination" v-if="totalPages > 1">
+        <button class="page-btn" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">‹</button>
+        <template v-for="p in displayedPages" :key="p">
+          <span v-if="p === '...'" class="page-btn" style="border:none;cursor:default;color:#9ca3af">...</span>
+          <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="goPage(p)">{{ p }}</button>
+        </template>
+        <button class="page-btn" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">›</button>
+      </div>
+    </main>
+
+    <!-- ========== Auth Modal ========== -->
+    <div class="modal-overlay" v-if="showAuthModal" @click.self="showAuthModal = false">
+      <div class="auth-modal" :class="{ 'slide-right': authMode === 'register' }">
+        <button class="auth-close-btn" @click="closeAuthModal">✕</button>
+
+        <!-- Login -->
+        <div class="auth-form-container login">
+          <form class="auth-form" @submit.prevent="handleLogin">
+            <h2>登录</h2>
+            <div class="form-group">
+              <input v-model="loginForm.email" type="email" class="form-input" placeholder="电子邮箱" required />
+            </div>
+            <div class="form-group">
+              <div class="pwd-input-wrap">
+                <input v-model="loginForm.password" :type="loginPwdVisible ? 'text' : 'password'" class="form-input" placeholder="密码" required />
+                <button type="button" class="pwd-toggle" @click="loginPwdVisible = !loginPwdVisible" tabindex="-1">
+                  {{ loginPwdVisible ? '🙈' : '👁' }}
+                </button>
+              </div>
+            </div>
+            <div class="form-group text-center mt-12">
+              <span class="alt-link" @click="showAuth('reset')" style="font-size:12px;color:#9ca3af">忘记密码？</span>
+            </div>
+            <button type="submit" class="main-btn" :disabled="authLoading">{{ authLoading ? '登录中...' : '登录' }}</button>
+          </form>
+        </div>
+
+        <!-- Register -->
+        <div class="auth-form-container register">
+          <form class="auth-form" @submit.prevent="handleRegister">
+            <h2>创建账号</h2>
+            <div class="form-group">
+              <input v-model="registerForm.email" type="email" class="form-input" placeholder="电子邮箱" required />
+            </div>
+            <div class="form-group">
+              <div class="pwd-input-wrap">
+                <input v-model="registerForm.password" :type="regPwdVisible ? 'text' : 'password'" class="form-input" placeholder="密码" required @input="calcRegPwdStrength" />
+                <button type="button" class="pwd-toggle" @click="regPwdVisible = !regPwdVisible" tabindex="-1">
+                  {{ regPwdVisible ? '🙈' : '👁' }}
+                </button>
+              </div>
+              <div class="pwd-strength" v-if="registerForm.password">
+                <div class="strength-bar">
+                  <div class="strength-seg" :style="{ background: regPwdScore >= 1 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: regPwdScore >= 2 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: regPwdScore >= 3 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: regPwdScore >= 4 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
+                </div>
+                <span class="strength-text" :style="{ color: regPwdScore > 0 ? strengthColors[regPwdScore - 1] : '#999' }">
+                  {{ ['', '弱', '一般', '良好', '强'][regPwdScore] }}
+                </span>
+                <span class="strength-hint">需包含数字、大小写字母、特殊字符且至少8位</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="form-row">
+                <input v-model="registerForm.code" type="text" class="form-input" placeholder="邮箱验证码" required style="flex:1" />
+                <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="codeCountdown > 0" @click="sendRegCode">
+                  {{ codeCountdown > 0 ? codeCountdown + 's' : '获取验证码' }}
+                </button>
+              </div>
+            </div>
+            <button type="submit" class="main-btn" :disabled="authLoading">{{ authLoading ? '注册中...' : '注册' }}</button>
+          </form>
+        </div>
+
+        <!-- Overlay -->
+        <div class="auth-overlay-container">
+          <div class="auth-overlay">
+            <div class="auth-overlay-panel left">
+              <h2>欢迎回来！</h2>
+              <p>已有账号，立即登录！</p>
+              <button class="ghost-btn" @click="showAuth('login')">立即登录</button>
+            </div>
+            <div class="auth-overlay-panel right">
+              <h2>你好，朋友！</h2>
+              <p>还没有账号？快来注册吧！</p>
+              <button class="ghost-btn" @click="showAuth('register')">立即注册</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Reset Pwd Modal ========== -->
+    <div class="modal-overlay" v-if="showResetModal" @click.self="closeResetModal">
+      <div class="profile-modal" style="max-width:400px">
+        <button class="close-btn" @click="closeResetModal">✕</button>
+        <h3 style="font-size:20px;text-align:center;margin-bottom:20px">重置密码</h3>
+        <form @submit.prevent="handleResetPwd">
+          <div class="form-group">
+            <label class="form-label">邮箱</label>
+            <input v-model="resetForm.email" type="email" class="form-input" placeholder="注册邮箱" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">新密码</label>
+            <div class="pwd-input-wrap">
+              <input v-model="resetForm.newPwd" :type="resetPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required @input="calcResetPwdStrength" />
+              <button type="button" class="pwd-toggle" @click="resetPwdVisible = !resetPwdVisible" tabindex="-1">
+                {{ resetPwdVisible ? '🙈' : '👁' }}
+              </button>
+            </div>
+            <div class="pwd-strength" v-if="resetForm.newPwd">
+              <div class="strength-bar">
+                <div class="strength-seg" :style="{ background: resetPwdScore >= 1 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
+                <div class="strength-seg" :style="{ background: resetPwdScore >= 2 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
+                <div class="strength-seg" :style="{ background: resetPwdScore >= 3 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
+                <div class="strength-seg" :style="{ background: resetPwdScore >= 4 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
+              </div>
+              <span class="strength-text" :style="{ color: resetPwdScore > 0 ? strengthColors[resetPwdScore - 1] : '#999' }">
+                {{ ['', '弱', '一般', '良好', '强'][resetPwdScore] }}
+              </span>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="form-row">
+              <input v-model="resetForm.code" type="text" class="form-input" placeholder="验证码" required style="flex:1" />
+              <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="codeCountdown > 0" @click="sendResetCode">
+                {{ codeCountdown > 0 ? codeCountdown + 's' : '获取验证码' }}
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" :disabled="authLoading">
+            {{ authLoading ? '提交中...' : '重置密码' }}
+          </button>
+        </form>
+        <p class="text-center mt-16">
+          <span class="alt-link" style="color:var(--gray-400)" @click="resetToLogin">← 返回登录</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- ========== Profile Modal ========== -->
+    <div class="modal-overlay" v-if="showProfileModal" @click.self="closeProfileModal">
+      <div class="profile-modal">
+        <button class="close-btn" @click="closeProfileModal">✕</button>
+
+        <!-- Avatar -->
+        <div class="avatar-upload-wrapper">
+          <label class="avatar-upload" title="点击更换头像">
+            <img v-if="profileForm.avatarPreview" :src="profileForm.avatarPreview" alt="avatar" @error="profileForm.avatarPreview = ''" />
+            <div v-else class="avatar-placeholder">👤</div>
+            <div class="avatar-overlay">
+              <span class="camera-icon">📷</span>
+              <span class="hint-text">更换头像</span>
+            </div>
+            <input type="file" accept="image/*" @change="onAvatarFileChange" />
+          </label>
+        </div>
+
+        <div class="profile-info">
+          <div style="font-size:16px;font-weight:600;color:var(--gray-800)">{{ user.nickname || '未设置昵称' }}</div>
+          <div class="profile-email">{{ user.email }}</div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="profile-stats">
+          <div class="profile-stat-card" @click="goFavorites">
+            <div class="count">{{ favCount }}</div>
+            <div class="label">我的收藏</div>
+          </div>
+          <div class="profile-stat-card" @click="goHistory">
+            <div class="count">{{ histCount }}</div>
+            <div class="label">浏览历史</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="profile-tabs">
+          <div class="profile-tab" :class="{ active: profileTab === 'info' }" @click="profileTab = 'info'">个人资料</div>
+          <div class="profile-tab" :class="{ active: profileTab === 'password' }" @click="switchToPwdTab">修改密码</div>
+        </div>
+
+        <!-- Info -->
+        <div v-if="profileTab === 'info'">
+          <form @submit.prevent="handleUpdateProfile">
+            <div class="form-group">
+              <label class="form-label">昵称</label>
+              <input v-model="profileForm.nickname" type="text" class="form-input" placeholder="请输入昵称" maxlength="10" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">个人简介</label>
+              <textarea v-model="profileForm.bio" class="form-input" placeholder="介绍一下自己吧" maxlength="100"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%" :disabled="profileSaving">
+              {{ profileSaving ? '保存中...' : '保存修改' }}
+            </button>
+          </form>
+          <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--gray-200); text-align: center;">
+            <button class="btn btn-danger btn-sm" @click="confirmDeleteAccount = true" style="width:100%">注销账户</button>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div v-if="profileTab === 'password'">
+          <form @submit.prevent="handleUpdatePwd">
+            <div class="form-group">
+              <label class="form-label">当前密码</label>
+              <div class="pwd-input-wrap">
+                <input v-model="pwdForm.cur_pwd" :type="profileCurPwdVisible ? 'text' : 'password'" class="form-input" placeholder="请输入当前密码" required minlength="8" />
+                <button type="button" class="pwd-toggle" @click="profileCurPwdVisible = !profileCurPwdVisible" tabindex="-1">
+                  {{ profileCurPwdVisible ? '🙈' : '👁' }}
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">新密码</label>
+              <div class="pwd-input-wrap">
+                <input v-model="pwdForm.new_pwd" :type="profileNewPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required minlength="8" @input="calcProfilePwdStrength" />
+                <button type="button" class="pwd-toggle" @click="profileNewPwdVisible = !profileNewPwdVisible" tabindex="-1">
+                  {{ profileNewPwdVisible ? '🙈' : '👁' }}
+                </button>
+              </div>
+              <div class="pwd-strength" v-if="pwdForm.new_pwd">
+                <div class="strength-bar">
+                  <div class="strength-seg" :style="{ background: profilePwdScore >= 1 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: profilePwdScore >= 2 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: profilePwdScore >= 3 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: profilePwdScore >= 4 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
+                </div>
+                <span class="strength-text" :style="{ color: profilePwdScore > 0 ? strengthColors[profilePwdScore - 1] : '#999' }">
+                  {{ ['', '弱', '一般', '良好', '强'][profilePwdScore] }}
+                </span>
+              </div>
+              <div class="form-error" v-if="pwdSameError" style="margin-top:4px">{{ pwdSameError }}</div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%" :disabled="pwdSaving">
+              {{ pwdSaving ? '提交中...' : '更新密码' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Delete Confirm ========== -->
+    <div class="modal-overlay" v-if="confirmDeleteAccount" @click.self="confirmDeleteAccount = false">
+      <div class="confirm-modal">
+        <h3>确认注销账户</h3>
+        <p>注销后所有数据将被永久删除，包括收藏和浏览历史。此操作不可撤销。</p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" @click="confirmDeleteAccount = false">取消</button>
+          <button class="btn btn-danger" @click="handleDeleteAccount" :disabled="deletingAccount">
+            {{ deletingAccount ? '注销中...' : '确认注销' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div v-if="toast.show" class="toast" :class="'toast-' + toast.type" @click="toast.show = false">{{ toast.message }}</div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+      setup() {
+        // --- News ---
+        const categories = ref([]);
+        const newsList = ref([]);
+        const total = ref(0);
+        const currentPage = ref(1);
+        const pageSize = ref(12);
+        const currentCategoryId = ref(null);
+        const loading = ref(false);
+
+        // --- Auth ---
+        const loggedIn = ref(false);
+        const user = ref({});
+        const showAuthModal = ref(false);
+        const authMode = ref('login');
+        const showResetModal = ref(false);
+        const authLoading = ref(false);
+        const codeCountdown = ref(0);
+        const loginForm = ref({ email: '', password: '' });
+        const loginPwdVisible = ref(false);
+        const registerForm = ref({ email: '', password: '', code: '' });
+        const regPwdVisible = ref(false);
+        const regPwdScore = ref(0);
+        const resetForm = ref({ email: '', newPwd: '', code: '' });
+        const resetPwdVisible = ref(false);
+        const resetPwdScore = ref(0);
+
+        // --- Profile ---
+        const showProfileModal = ref(false);
+        const profileTab = ref('info');
+        const profileForm = ref({ nickname: '', bio: '', avatarPreview: '' });
+        const avatarFile = ref(null);
+        const profileSaving = ref(false);
+        const pwdForm = ref({ cur_pwd: '', new_pwd: '' });
+        const profileCurPwdVisible = ref(false);
+        const profileNewPwdVisible = ref(false);
+        const profilePwdScore = ref(0);
+        const pwdSameError = ref('');
+        const pwdSaving = ref(false);
+        const confirmDeleteAccount = ref(false);
+        const deletingAccount = ref(false);
+        const favCount = ref(0);
+        const histCount = ref(0);
+
+        // --- Toast ---
+        const toast = ref({ show: false, message: '', type: 'success' });
+        const strengthColors = ['#ef4444', '#f59e0b', '#3b82f6', '#1e40af'];
+
+        // --- Computed ---
+        const totalPages = computed(() => Math.ceil(total.value / pageSize.value) || 0);
+        const displayedPages = computed(() => {
+          const pages = [];
+          const tp = totalPages.value;
+          if (tp <= 7) { for (let i = 1; i <= tp; i++) pages.push(i); return pages; }
+          pages.push(1);
+          if (currentPage.value > 3) pages.push('...');
+          for (let i = Math.max(2, currentPage.value - 1); i <= Math.min(tp - 1, currentPage.value + 1); i++) pages.push(i);
+          if (currentPage.value < tp - 2) pages.push('...');
+          pages.push(tp);
+          return pages;
+        });
+
+        const avatarSrc = computed(() => {
+          if (user.value && user.value.avatar) return avatarUrl(user.value.avatar);
+          return 'https://via.placeholder.com/38';
+        });
+
+        // --- Modal count (for scroll lock) ---
+        const anyModalOpen = computed(() =>
+          showAuthModal.value || showResetModal.value || showProfileModal.value || confirmDeleteAccount.value
+        );
+
+        watch(anyModalOpen, v => {
+          document.body.classList.toggle('modal-open', v);
+        });
+
+        // --- Password Strength ---
+        function calcPwdScore(pwd) {
+          if (!pwd) return 0;
+          let score = 0;
+          if (pwd.length >= 8) score++;
+          if (/[a-z]/.test(pwd)) score++;
+          if (/[A-Z]/.test(pwd)) score++;
+          if (/[0-9]/.test(pwd)) score++;
+          if (/[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]/.test(pwd)) score++;
+          return Math.min(score, 4);
+        }
+        function calcRegPwdStrength() { regPwdScore.value = calcPwdScore(registerForm.value.password); }
+        function calcResetPwdStrength() { resetPwdScore.value = calcPwdScore(resetForm.value.newPwd); }
+        function calcProfilePwdStrength() {
+          profilePwdScore.value = calcPwdScore(pwdForm.value.new_pwd);
+          pwdSameError.value = (pwdForm.value.new_pwd && pwdForm.value.cur_pwd === pwdForm.value.new_pwd) ? '新密码不能与当前密码相同' : '';
+        }
+
+        // --- Helpers ---
+        function showToast(msg, type = 'success') {
+          toast.value = { show: true, message: msg, type };
+          setTimeout(() => { toast.value.show = false; }, 3000);
+        }
+
+        function formatDate(dateStr) {
+          if (!dateStr) return '';
+          const d = new Date(dateStr);
+          const pad = n => String(n).padStart(2, '0');
+          return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        function startCodeTimer() {
+          codeCountdown.value = 60;
+          const timer = setInterval(() => { codeCountdown.value--; if (codeCountdown.value <= 0) clearInterval(timer); }, 1000);
+        }
+
+        // --- Form cleanup ---
+        function resetLoginForm() { loginForm.value = { email: '', password: '' }; loginPwdVisible.value = false; }
+        function resetRegisterForm() { registerForm.value = { email: '', password: '', code: '' }; regPwdVisible.value = false; regPwdScore.value = 0; }
+        function resetResetForm() { resetForm.value = { email: '', newPwd: '', code: '' }; resetPwdVisible.value = false; resetPwdScore.value = 0; }
+        function resetPwdFields() { pwdForm.value = { cur_pwd: '', new_pwd: '' }; profileCurPwdVisible.value = false; profileNewPwdVisible.value = false; profilePwdScore.value = 0; pwdSameError.value = ''; }
+
+        // --- News ---
+        async function fetchCategories() { try { const d = await NewsAPI.getCategories(); if (Array.isArray(d)) categories.value = d; } catch (e) {} }
+        async function fetchNews() {
+          loading.value = true;
+          try {
+            const data = await NewsAPI.getList(currentCategoryId.value, currentPage.value, pageSize.value);
+            if (data && data.NewsList) { newsList.value = data.NewsList; total.value = data.total || 0; }
+            else if (data && data.newsList) { newsList.value = data.newsList; total.value = data.total || 0; }
+            else if (Array.isArray(data)) { newsList.value = data; total.value = data.length; }
+            else { newsList.value = []; total.value = 0; }
+          } catch (e) { showToast(e.message, 'error'); newsList.value = []; }
+          finally { loading.value = false; }
+        }
+        function selectCategory(catId) { currentCategoryId.value = catId; currentPage.value = 1; fetchNews(); }
+        function goPage(p) { if (p === '...') return; currentPage.value = p; fetchNews(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function goHome() { currentCategoryId.value = null; currentPage.value = 1; fetchNews(); }
+        function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
+        function goFavorites() { window.location.href = 'favorites.html'; }
+        function goHistory() { window.location.href = 'history.html'; }
+
+        // --- Auth ---
+        function showAuth(mode) {
+          authMode.value = mode;
+          resetLoginForm();
+          resetRegisterForm();
+          showResetModal.value = false;
+          showAuthModal.value = true;
+          if (mode === 'reset') { showAuthModal.value = false; showResetModal.value = true; }
+        }
+        function closeAuthModal() { showAuthModal.value = false; resetLoginForm(); resetRegisterForm(); }
+        function closeResetModal() { showResetModal.value = false; resetResetForm(); }
+        function resetToLogin() { showResetModal.value = false; resetResetForm(); showAuth('login'); }
+
+        async function handleLogin() {
+          if (!loginForm.value.email || !loginForm.value.password) { showToast('请填写邮箱和密码', 'error'); return; }
+          authLoading.value = true;
+          try {
+            const data = await UserAPI.login(loginForm.value);
+            if (data && data.token) { setToken(data.token); await loadUser(); showAuthModal.value = false; showToast('登录成功，欢迎回来！'); }
+          } catch (e) { showToast(e.message, 'error'); }
+          finally { authLoading.value = false; }
+        }
+
+        async function handleRegister() {
+          if (!registerForm.value.email || !registerForm.value.password || !registerForm.value.code) { showToast('请填写完整信息', 'error'); return; }
+          if (calcPwdScore(registerForm.value.password) < 4) { showToast('密码强度不足，请按照提示设置密码', 'error'); return; }
+          authLoading.value = true;
+          try {
+            await UserAPI.register(registerForm.value);
+            showToast('注册成功，请登录');
+            showAuth('login');
+            loginForm.value.email = registerForm.value.email;
+            registerForm.value = { email: '', password: '', code: '' };
+          } catch (e) { showToast(e.message, 'error'); }
+          finally { authLoading.value = false; }
+        }
+
+        async function handleResetPwd() {
+          if (!resetForm.value.email || !resetForm.value.newPwd || !resetForm.value.code) { showToast('请填写完整', 'error'); return; }
+          if (calcPwdScore(resetForm.value.newPwd) < 4) { showToast('新密码强度不足', 'error'); return; }
+          authLoading.value = true;
+          try {
+            await UserAPI.resetPwd({ email: resetForm.value.email, code: resetForm.value.code, newPwd: resetForm.value.newPwd });
+            showToast('密码重置成功');
+            showResetModal.value = false;
+            resetResetForm();
+            showAuth('login');
+          } catch (e) { showToast(e.message, 'error'); }
+          finally { authLoading.value = false; }
+        }
+
+        async function sendRegCode() {
+          if (!registerForm.value.email) { showToast('请先输入邮箱', 'error'); return; }
+          try { await CommonAPI.sendCode(registerForm.value.email); showToast('验证码已发送'); startCodeTimer(); }
+          catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function sendResetCode() {
+          if (!resetForm.value.email) { showToast('请先输入邮箱', 'error'); return; }
+          try { await CommonAPI.sendCode(resetForm.value.email); showToast('验证码已发送'); startCodeTimer(); }
+          catch (e) { showToast(e.message, 'error'); }
+        }
+
+        function doLogout() { logout(); loggedIn.value = false; user.value = {}; showToast('已退出登录'); }
+
+        // --- User ---
+        async function loadUser() {
+          try { user.value = await UserAPI.getInfo(); loggedIn.value = true; }
+          catch (e) { setToken(null); loggedIn.value = false; }
+        }
+
+        async function loadProfileStats() {
+          try {
+            const favData = await FavAPI.getAll(1, 1);
+            favCount.value = favData && favData.total ? favData.total : 0;
+          } catch (e) {}
+          try {
+            const histData = await HistAPI.getAll(1, 1);
+            histCount.value = histData && histData.total ? histData.total : 0;
+          } catch (e) {}
+        }
+
+        function openProfile() {
+          if (!user.value) return;
+          resetPwdFields();
+          profileForm.value.nickname = user.value.nickname || '';
+          profileForm.value.bio = user.value.bio || '';
+          profileForm.value.avatarPreview = user.value.avatar ? avatarUrl(user.value.avatar) : '';
+          profileTab.value = 'info';
+          showProfileModal.value = true;
+          loadProfileStats();
+        }
+
+        function closeProfileModal() {
+          showProfileModal.value = false;
+          avatarFile.value = null;
+          resetPwdFields();
+        }
+
+        function onAvatarFileChange(e) {
+          if (e.target.files && e.target.files[0]) {
+            avatarFile.value = e.target.files[0];
+            profileForm.value.avatarPreview = URL.createObjectURL(e.target.files[0]);
+          }
+        }
+
+        async function handleUpdateProfile() {
+          profileSaving.value = true;
+          try {
+            const fd = new FormData();
+            if (profileForm.value.nickname) fd.append('nickname', profileForm.value.nickname);
+            if (profileForm.value.bio) fd.append('bio', profileForm.value.bio);
+            if (avatarFile.value) fd.append('avatar_file', avatarFile.value);
+            await UserAPI.updateInfo(fd);
+            await loadUser();
+            showToast('资料更新成功');
+            avatarFile.value = null;
+            profileForm.value.avatarPreview = user.value.avatar ? avatarUrl(user.value.avatar) : '';
+          } catch (e) { showToast(e.message || '更新失败', 'error'); }
+          finally { profileSaving.value = false; }
+        }
+
+        function switchToPwdTab() {
+          profileTab.value = 'password';
+          resetPwdFields();
+        }
+
+        async function handleUpdatePwd() {
+          if (!pwdForm.value.cur_pwd || !pwdForm.value.new_pwd) { showToast('请填写完整', 'error'); return; }
+          if (pwdForm.value.cur_pwd === pwdForm.value.new_pwd) { showToast('新密码不能与当前密码相同', 'error'); return; }
+          if (calcPwdScore(pwdForm.value.new_pwd) < 4) { showToast('新密码强度不足', 'error'); return; }
+          pwdSaving.value = true;
+          try {
+            await UserAPI.updatePwd(pwdForm.value);
+            showToast('密码更新成功');
+            resetPwdFields();
+          } catch (e) { showToast(e.message, 'error'); }
+          finally { pwdSaving.value = false; }
+        }
+
+        async function handleDeleteAccount() {
+          deletingAccount.value = true;
+          try {
+            await UserAPI.deleteAccount();
+            showToast('账户已注销');
+            confirmDeleteAccount.value = false;
+            showProfileModal.value = false;
+            doLogout();
+          } catch (e) { showToast(e.message, 'error'); }
+          finally { deletingAccount.value = false; }
+        }
+
+        // --- Init ---
+        onMounted(async () => {
+          if (window.isLoggedIn()) await loadUser();
+          await fetchCategories();
+          await fetchNews();
+        });
+
+        return {
+          categories, newsList, total, currentPage, currentCategoryId, loading,
+          loggedIn, user,
+          showAuthModal, authMode, showResetModal, authLoading, codeCountdown,
+          loginForm, loginPwdVisible,
+          registerForm, regPwdVisible, regPwdScore,
+          resetForm, resetPwdVisible, resetPwdScore,
+          showProfileModal, profileTab, profileForm, avatarFile, profileSaving,
+          pwdForm, profileCurPwdVisible, profileNewPwdVisible, profilePwdScore, pwdSameError, pwdSaving,
+          confirmDeleteAccount, deletingAccount, favCount, histCount,
+          toast, totalPages, displayedPages, avatarSrc, strengthColors,
+          calcRegPwdStrength, calcResetPwdStrength, calcProfilePwdStrength,
+          showToast, formatDate,
+          selectCategory, goPage, goHome, goDetail, goFavorites, goHistory,
+          showAuth, closeAuthModal, closeResetModal, resetToLogin,
+          handleLogin, handleRegister, handleResetPwd, sendRegCode, sendResetCode, doLogout,
+          openProfile, closeProfileModal, onAvatarFileChange, handleUpdateProfile,
+          switchToPwdTab, handleUpdatePwd, handleDeleteAccount,
+        };
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>

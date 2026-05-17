@@ -55,6 +55,8 @@ class ResponseCode(Enum):
     USER_PWD_AUTH_FAILED = (20007, "密码验证失败")
     USER_PWD_NOSET = (20008, "密码未设置")
     USER_PWD_EMPTY = (20009, "密码不能为空")
+    USER_PWD_WEAK = (20010, "密码需包含数字、大小写字母、特殊字符且至少8位")
+    USER_PWD_SAME = (20011, "新密码不能与当前密码相同")
 
     # ========== 新闻模块 (3xxxx) ==========
     NEWS_NOT_FOUND = (30001, "新闻不存在")

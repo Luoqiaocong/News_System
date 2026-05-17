@@ -62,8 +62,7 @@ class NewsService:
     async def get_news_detail(self, news_id:int):
        # 尝试从Redis获取新闻详情
         detail_key = f"news:detail:{news_id}"
-        cached_detail = await redis_client.get(detail_key)
-
+        cached_detail = await NewsCacheRepo.get_news_detail_cache(news_id, detail_key)
         if cached_detail:
             # 缓存命中，解析数据获取category_id
             detail_dict = json.loads(cached_detail) if isinstance(cached_detail, str) else cached_detail

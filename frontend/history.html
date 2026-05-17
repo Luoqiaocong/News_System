@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>浏览历史 - Seven新闻</title>
+  <link rel="icon" href="img/news.ico" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-logo" @click="goHome">
+          <span class="logo-icon">S</span>
+          <span>Seven新闻</span>
+        </div>
+        <div class="header-actions">
+          <span class="header-nickname" v-if="loggedIn">
+            <span class="wave">🕐</span>
+            {{ user.nickname || user.email?.split('@')[0] }}
+          </span>
+          <button class="btn btn-ghost btn-sm" @click="goHome">← 返回首页</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="flex-between mb-12" style="margin-bottom:24px">
+        <h2 style="font-size:22px;font-weight:700;display:flex;align-items:center;gap:10px">
+          <span style="display:inline-block;width:5px;height:24px;background:var(--primary-gradient);border-radius:3px"></span>
+          浏览历史
+          <span style="font-size:14px;font-weight:400;color:var(--gray-400)">共 {{ total }} 条</span>
+        </h2>
+        <div class="flex gap-8">
+          <button class="btn btn-outline btn-sm" @click="goFavorites">我的收藏</button>
+          <button class="btn btn-danger btn-sm" @click="clearAll" v-if="list.length > 0">清空全部</button>
+        </div>
+      </div>
+
+      <div class="loading" v-if="loading"><span class="spinner"></span> 加载中...</div>
+
+      <div class="empty" v-else-if="list.length === 0">
+        <div class="empty-icon">🕐</div>
+        <div class="empty-text">暂无浏览记录</div>
+        <button class="btn btn-primary mt-16" @click="goHome">去逛逛</button>
+      </div>
+
+      <template v-else>
+        <div class="table-toolbar flex-between" style="margin-bottom:12px">
+          <label class="flex gap-8" style="align-items:center;font-size:13px;color:var(--gray-500)">
+            <input type="checkbox" :checked="allSelected" @change="toggleAll" />
+            全选
+          </label>
+          <button class="btn btn-danger btn-sm" @click="batchRemove" :disabled="selectedIds.length === 0">
+            删除选中 ({{ selectedIds.length }})
+          </button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:40px"></th>
+              <th>新闻标题</th>
+              <th>作者</th>
+              <th>阅读量</th>
+              <th>浏览时间</th>
+              <th style="width:80px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.historyId">
+              <td><input type="checkbox" :value="item.historyId" v-model="selectedIds" /></td>
+              <td><span class="news-title-cell" @click="goDetail(item.id)">{{ item.title }}</span></td>
+              <td>{{ item.author }}</td>
+              <td>{{ item.views }}</td>
+              <td>{{ formatDate(item.viewTime) }}</td>
+              <td><button class="btn btn-danger btn-sm" style="border-radius:10px" @click="removeOne(item.historyId)">删除</button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pagination" v-if="totalPages > 1">
+          <button class="page-btn" :disabled="page <= 1" @click="goPage(page - 1)">‹</button>
+          <button v-for="p in pageNumbers" :key="p" class="page-btn" :class="{ active: p === page }" @click="goPage(p)">{{ p }}</button>
+          <button class="page-btn" :disabled="page >= totalPages" @click="goPage(page + 1)">›</button>
+        </div>
+      </template>
+    </main>
+
+    <div v-if="toast.show" class="toast" :class="'toast-' + toast.type" @click="toast.show = false">{{ toast.message }}</div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const loggedIn = ref(false);
+        const user = ref({});
+        const list = ref([]);
+        const total = ref(0);
+        const page = ref(1);
+        const pageSize = ref(15);
+        const loading = ref(true);
+        const selectedIds = ref([]);
+        const toast = ref({ show: false, message: '', type: 'success' });
+
+        const totalPages = computed(() => Math.ceil(total.value / pageSize.value) || 0);
+        const allSelected = computed({
+          get: () => list.value.length > 0 && selectedIds.value.length === list.value.length,
+          set: v => { if (v) selectedIds.value = list.value.map(o => o.historyId); else selectedIds.value = []; }
+        });
+
+        const pageNumbers = computed(() => {
+          const p = [];
+          for (let i = 1; i <= totalPages.value; i++) p.push(i);
+          return p;
+        });
+
+        function showToast(msg, type = 'success') {
+          toast.value = { show: true, message: msg, type };
+          setTimeout(() => { toast.value.show = false; }, 3000);
+        }
+
+        function formatDate(s) {
+          if (!s) return '';
+          const d = new Date(s), pad = n => String(n).padStart(2, '0');
+          return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        async function fetchList() {
+          loading.value = true;
+          selectedIds.value = [];
+          try {
+            const data = await HistAPI.getAll(page.value, pageSize.value);
+            list.value = data && data.historyList ? data.historyList : (Array.isArray(data) ? data : []);
+            total.value = data && data.total ? data.total : list.value.length;
+          } catch (e) { showToast(e.message, 'error'); }
+          finally { loading.value = false; }
+        }
+
+        function goPage(p) { page.value = p; fetchList(); }
+        function toggleAll() {}
+
+        async function removeOne(id) {
+          try { await HistAPI.deleteHistory([id]); showToast('已删除'); fetchList(); }
+          catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function batchRemove() {
+          if (!selectedIds.value.length) return;
+          if (!confirm('确定删除选中的 ' + selectedIds.value.length + ' 条浏览记录？')) return;
+          try { await HistAPI.deleteHistory(selectedIds.value); showToast('已删除'); fetchList(); }
+          catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function clearAll() {
+          if (!confirm('确定清空所有浏览记录？此操作不可恢复。')) return;
+          try { await HistAPI.clearAll(); list.value = []; total.value = 0; showToast('已清空'); }
+          catch (e) { showToast(e.message, 'error'); }
+        }
+
+        function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
+        function goHome() { window.location.href = 'index.html'; }
+        function goFavorites() { window.location.href = 'favorites.html'; }
+
+        onMounted(async () => {
+          if (window.isLoggedIn()) {
+            loggedIn.value = true;
+            try { user.value = await UserAPI.getInfo(); } catch (e) { setToken(null); loggedIn.value = false; }
+          }
+          if (!window.isLoggedIn()) { window.location.href = 'index.html'; return; }
+          await fetchList();
+        });
+
+        return {
+          loggedIn, user, list, total, page, loading, selectedIds, toast,
+          totalPages, allSelected, pageNumbers,
+          formatDate, fetchList, goPage, toggleAll,
+          removeOne, batchRemove, clearAll, goDetail, goHome, goFavorites,
+        };
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>

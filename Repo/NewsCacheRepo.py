@@ -28,4 +28,8 @@ class NewsCacheRepo:
 
             return news_detail_list, total
 
+    @staticmethod
+    async def get_news_detail_cache(new_id:int,detail_key:str):
+        return await redis_client.get(detail_key)
+
 
