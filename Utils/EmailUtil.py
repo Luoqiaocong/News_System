@@ -1,8 +1,6 @@
 # Utils/EmailUtil.py
 from email.message import EmailMessage
 import aiosmtplib
-import random
-import string
 
 from Config.settings import settings
 from Utils.LogUtil import log
@@ -11,9 +9,7 @@ from Utils.LogUtil import log
 class EmailHelper:
 
     @staticmethod
-    async def send_code(receiver: str) -> str:
-        code = ''.join(random.choices(string.digits, k=6))
-
+    async def send_code(receiver: str, code: str) -> bool:
         message = EmailMessage()
         message["From"] = settings.SENDER
         message["To"] = receiver
@@ -30,7 +26,7 @@ class EmailHelper:
                 use_tls=True,
             )
             log.info(f"验证码已发送至邮箱: {receiver}")
-            return code
+            return True
         except Exception as e:
             log.error(f"邮件发送失败: {str(e)}")
-            return ""
+            return False

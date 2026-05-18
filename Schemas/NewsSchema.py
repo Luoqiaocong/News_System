@@ -6,18 +6,16 @@ from typing import List, Optional, Annotated
 
 class CategoryData(BaseModel):
     """分类数据模型"""
-    model_config = {
-        "from_attributes": True
-    }
     id: int=Field(...,description="分类ID")
     name: str=Field(...,description="分类名称")
 
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class NewsData(BaseModel):
-    """新闻数据模型"""
-    model_config={
-        "from_attributes":True
-    }
+    """新闻详情数据模型"""
     id: int
     category_id: int
     title: str
@@ -28,7 +26,9 @@ class NewsData(BaseModel):
     summary: str
     content: Optional[str] = None
 
-
+    model_config={
+        "from_attributes":True
+    }
 
 
 class NewsListCard(BaseModel):
@@ -41,10 +41,20 @@ class NewsListCard(BaseModel):
     thumbnail: str
     summary: str
 
+    model_config = {"from_attributes": True}
+
 class RelatedNewsCard(NewsListCard):
     """相关新闻卡片模型"""
     model_config = {"from_attributes": True}
 
+
+class NewsDetailResponse(BaseModel):
+    detail: NewsData
+    related_news: List[RelatedNewsCard]
+
+    model_config = {
+       "from_attributes": True # 允许从 ORM 对象创建模型实例
+    }
 
 
 class NewsListResponse(BaseModel):

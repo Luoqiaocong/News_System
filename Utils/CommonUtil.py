@@ -18,7 +18,7 @@ def handle_service_exception(
     Service 层异常处理装饰器
 
     用法：
-    @handle_service_exception("获取新闻列表失败")
+    @handle_service_exception(pass_through_exceptions=(NewsException,))
     """
     def decorator(func: Callable):
         @functools.wraps(func)

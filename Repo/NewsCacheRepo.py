@@ -13,13 +13,13 @@ class NewsCacheRepo:
     @staticmethod
     async def get_news_list_cache(category_id: int|None, start: int, end: int):
         zset_key = f"news:list:{category_id}" if category_id is not None else "news:list:all"
-        total = await redis_client.zcard(zset_key)
+        total = await redis_client.zcard(zset_key) # 获取总数
         if not total:
             return None, 0
-        news_ids = await redis_client.zrevrange(zset_key, start, end)
+        news_ids = await redis_client.zrevrange(zset_key, start, end) # 获取分页的新闻 ID 列表（倒序）
         if not news_ids:
             return None, total
-        detail_keys = [f"news:detail:{nid.decode('utf-8') if isinstance(nid, bytes) else nid}" for nid in news_ids]
+        detail_keys = [f"news:detail:{nid.decode('utf-8') if isinstance(nid, bytes) else nid}" for nid in news_ids]  # 构造对应的详情缓存键
         news_detail_list = await redis_client.mget(*detail_keys)
         return news_detail_list, total
 
@@ -39,6 +39,26 @@ class NewsCacheRepo:
         key = f"news:detail:{news_id}"
         await redis_client.delete(key)
 
+    @staticmethod
+    async def bump_views_cache(news_id: int):
+        """
+        浏览量 +1 后，同步更新 Redis 缓存中的 views 字段，
+        避免下次请求命中缓存时返回旧的浏览量。
+        """
+        key = f"news:detail:{news_id}"
+        cached = await redis_client.get(key)
+        if cached:
+            if isinstance(cached, dict):
+                cached["views"] = cached.get("views", 0) + 1
+            elif isinstance(cached, str):
+                try:
+                    parsed = json.loads(cached)
+                    parsed["views"] = parsed.get("views", 0) + 1
+                    cached = parsed
+                except (json.JSONDecodeError, TypeError):
+                    return
+            await redis_client.set(key, cached, expire=3600)
+
     # ========== 相关新闻缓存（Set + SRANDMEMBER） ==========
     @staticmethod
     async def get_related_news_cache(category_id: int, exclude_id: int, fetch_count: int = 12):
@@ -48,11 +68,9 @@ class NewsCacheRepo:
         返回 list[dict]（从 news:detail 反序列化），或 None 表示缓存未命中。
         """
         set_key = f"news:related:{category_id}"
-        raw_ids = await redis_client.srandmember(set_key, fetch_count)
-        if not raw_ids:
-            return None
+        raw_ids = await redis_client.srandmember(set_key, fetch_count)  # 从 Set 中随机取一些新闻 ID（str），可能包含 exclude_id
 
-        ids = [int(nid) for nid in raw_ids if int(nid) != exclude_id][:6]
+        ids = [int(nid) for nid in raw_ids if int(nid) != exclude_id][:6]  # 排除当前的新闻id
         if not ids:
             return []
 
@@ -73,8 +91,13 @@ class NewsCacheRepo:
         将某分类下的所有新闻 ID 写入 Redis Set，供 SRANDMEMBER 随机取。
         """
         set_key = f"news:related:{category_id}"
-        str_ids = [str(nid) for nid in news_ids]
-        if str_ids:
+
+        if news_ids:
+            # 1. 正常有数据，塞入真正的新闻 ID
+            str_ids = [str(nid) for nid in news_ids]
             await redis_client.sadd(set_key, *str_ids)
-            # 防止过期后一直是空 Set 导致每次都查 DB
-            await redis_client.expire(set_key, expire)
+            await redis_client.expire(set_key, expire) # 正常过期时间（如 1 小时）
+        else:
+            # 2. 数据库里是个空分类！为了防止穿透，塞入一个特殊的标记 "-1"
+            await redis_client.sadd(set_key, "-1")
+            await redis_client.expire(set_key, 300) # 空缓存的过期时间设短一点（如 5 分钟）

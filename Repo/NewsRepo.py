@@ -56,35 +56,29 @@ class NewsRepo:
 
         return news_result, count_result
 
-
     async def get_news_detail(self,news_id: int):
         """
         获取新闻详情。
-
-        :param db: 数据库会话
         :param news_id: 新闻ID
         :return: 新闻对象
-        :raises HTTPException: 当新闻不存在时抛出404错误
         """
         # 构建查询语句
         stmt = select(News).where(News.id == news_id)
         result = (await self.db.execute(stmt)).scalar_one_or_none()
 
-        # 如果新闻不存在，抛出404异常
+        # 如果新闻不存在，返回 None
         if not result:
             return None
 
         # 刷新对象以确保获取最新数据
         await self.db.refresh(result)
 
-        return result
-
+        return result  # 返回 ORM 对象，Service 层负责转换为 Pydantic 模型
 
     async def update_views(self, news_id: int):
         """
         更新新闻的浏览量（加1）。
 
-        :param db: 数据库会话
         :param news_id: 新闻ID
         :return: 布尔值，表示是否成功更新
         """
@@ -95,10 +89,10 @@ class NewsRepo:
             .values(views=News.views + 1)
         )
         result = await self.db.execute(stmt)
+        await self.db.flush()
 
         # 返回是否更新成功（受影响的行数大于0表示成功）
         return result.rowcount > 0
-
 
     async def get_related_news(self,news_id: int, category_id: int):
         """

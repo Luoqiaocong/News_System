@@ -1,25 +1,29 @@
+from datetime import datetime
 import functools
 import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Annotated, Callable, Type, Tuple
-from fastapi import HTTPException, Depends
+from typing import Annotated, Callable, Optional, Type, Tuple
+from fastapi import HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import NewsException, ResponseCode
 from Repo import NewsRepo, NewsCacheRepo,UserHistoryRepo
-from Schemas.NewsSchema import CategoryData, NewsData, NewsListResponse, NewsListCard, RelatedNewsCard
+from Schemas.NewsSchema import CategoryData, NewsData, NewsDetailResponse, NewsListResponse, NewsListCard, RelatedNewsCard
 from Schemas.UserSchema import UserInfo
 from Utils.CommonUtil import handle_service_exception
 from Utils.RedisUtil import redis_cache_decorator
 from Utils.LogUtil import log
+from models.UserNewsHistory import UserNewsHistory
 
 
 class NewsService:
     def __init__(self,
                 repo: Annotated[NewsRepo, Depends()],
+                Histrepo:Annotated[UserHistoryRepo, Depends()],
                 db: Annotated[AsyncSession, Depends(get_db)]):
         self.repo = repo
+        self.histrepo = Histrepo
         self.db = db
 
     @asynccontextmanager
@@ -39,19 +43,19 @@ class NewsService:
         key_prefix="news:categories:{category_id}",
         expire=7200,
     )
-    async def get_news_categories(self,category_id: int = None):
+    async def get_news_categories(self,category_id: Annotated[Optional[int], Query()] = None) -> list[CategoryData]:
         categories_orm = await self.repo.get_categories(category_id)
         if not categories_orm:
             raise NewsException(code=ResponseCode.NEWS_CATEGORY_NOT_FOUND)
 
         return [CategoryData.model_validate(cat) for cat in categories_orm]
 
-    @handle_service_exception(pass_through_exceptions=(NewsException,))
+    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_list(self,category_id: int|None, page: int, page_size: int)->NewsListResponse:
         # 计算分页索引
         start = (page - 1) * page_size
         end = start + page_size - 1
-
+    
         news_detail_lt,total = await NewsCacheRepo.get_news_list_cache(category_id,start,end)
         if not news_detail_lt or not total:
             raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
@@ -59,20 +63,20 @@ class NewsService:
             news_list=[NewsListCard.model_validate(json.loads(detail)) for detail in news_detail_lt if detail],
             total=total)
 
-    @handle_service_exception(pass_through_exceptions=(NewsException,))
+    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_detail(self, news_id:int):
         # ====== 1. 新闻详情（先缓存，后 DB）======
         detail_dict = await NewsCacheRepo.get_detail_cache(news_id)
         if detail_dict:
             # 缓存命中
-            category_id = detail_dict.get("category_id")
+            category_id = detail_dict.get("category_id")  # 从缓存中获取 category_id，后续获取相关新闻会用到
         else:
             # 缓存未命中，走 DB
             detail_orm = await self.repo.get_news_detail(news_id)
             if not detail_orm:
-                raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
-            category_id = detail_orm.category_id
-            detail_dict = NewsData.model_validate(detail_orm).model_dump()
+                raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)  
+            category_id = detail_orm.category_id  # 从 DB 获取 category_id
+            detail_dict = NewsData.model_validate(detail_orm).model_dump()  # 转 dict 写回缓存，避免重复序列化
             # 写回缓存
             await NewsCacheRepo.set_detail_cache(news_id, detail_dict)
 
@@ -87,11 +91,10 @@ class NewsService:
                 await NewsCacheRepo.warm_related_news(category_id, related_ids)
 
         # ====== 3. 打包返回 ======
-        return {
-            "detail": detail_dict,
-            "related_news": [RelatedNewsCard.model_validate(item) for item in related]
-        }
+        return NewsDetailResponse(detail=NewsData.model_validate(detail_dict),related_news=[RelatedNewsCard.model_validate(r) for r in related])
+    
 
+    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
     async def handle_news_view(
             self,
             news_id: int,
@@ -105,20 +108,20 @@ class NewsService:
         # --- 1. 更新浏览量 (核心) ---
         success = await  self.repo.update_views(news_id)
         if not success:
-            raise HTTPException(status_code=404, detail="该新闻不存在")
+            raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
 
         # 立即提交浏览量，保住核心数据
         await self.db.commit()
 
-        # --- 2. 记录历史 (附属) ---
-        if user and user.id:
-            try:
-                await UserHistoryRepo.add_view(news_id, user.id)
-                # 历史记录成功/更新后，提交历史记录的事务
-                await self.db.commit()
-            except Exception as e:
-                # 万一发生其他意外（如数据库断开），确保回滚并静默
-                await self.db.rollback()
-                logging.error(f"\'{user.email}\'记录浏览历史失败，失败原因-->{e}")
+        # 同步刷新 Redis 缓存中的浏览量，避免下次请求返回旧值
+        await NewsCacheRepo.bump_views_cache(news_id)
+
+        async with self.transaction_scope():
+            # --- 2. 记录历史 (附属) ---
+            if user and user.id:
+                is_add = await self.histrepo.add_view(news_id, user.id)
+                if not is_add:
+                    await self.histrepo.add_hist(news_id, user.id)  # 新增调用 add_hist方法，确保记录存在
+
 
 
