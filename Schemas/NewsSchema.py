@@ -29,6 +29,8 @@ class NewsData(BaseModel):
     content: Optional[str] = None
 
 
+
+
 class NewsListCard(BaseModel):
     """新闻列表卡片模型"""
     id: int
@@ -38,6 +40,12 @@ class NewsListCard(BaseModel):
     views: int
     thumbnail: str
     summary: str
+
+class RelatedNewsCard(NewsListCard):
+    """相关新闻卡片模型"""
+    model_config = {"from_attributes": True}
+
+
 
 class NewsListResponse(BaseModel):
     news_list: Annotated[List[NewsListCard], Field(description="新闻列表",alias="NewsList")]

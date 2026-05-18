@@ -80,7 +80,7 @@ class NewsRepo:
         return result
 
 
-    async def update_views(self,db: AsyncSession, news_id: int):
+    async def update_views(self, news_id: int):
         """
         更新新闻的浏览量（加1）。
 
@@ -94,7 +94,7 @@ class NewsRepo:
             .where(News.id == news_id)
             .values(views=News.views + 1)
         )
-        result = await db.execute(stmt)
+        result = await self.db.execute(stmt)
 
         # 返回是否更新成功（受影响的行数大于0表示成功）
         return result.rowcount > 0
@@ -118,16 +118,4 @@ class NewsRepo:
         )
         result = await self.db.execute(stmt)
 
-        # 将结果转换为字典列表返回
-        return [
-            {
-                "id": item.id,
-                "title": item.title,
-                "author": item.author,
-                "summary": item.summary,
-                "thumbnail": item.thumbnail,
-                "views": item.views,
-                "category_id": item.category_id
-            }
-            for item in result.scalars().all()
-        ]
+        return  result.scalars().all()

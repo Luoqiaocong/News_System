@@ -81,13 +81,13 @@
     </main>
 
     <!-- ========== Auth Modal ========== -->
-    <div class="modal-overlay" v-if="showAuthModal" @click.self="showAuthModal = false">
+    <div class="modal-overlay" v-if="showAuthModal">
       <div class="auth-modal" :class="{ 'slide-right': authMode === 'register' }">
         <button class="auth-close-btn" @click="closeAuthModal">✕</button>
 
         <!-- Login -->
         <div class="auth-form-container login">
-          <form class="auth-form" @submit.prevent="handleLogin">
+          <form class="auth-form" @submit.prevent="handleLogin" autocomplete="off">
             <h2>登录</h2>
             <div class="form-group">
               <input v-model="loginForm.email" type="email" class="form-input" placeholder="电子邮箱" required />
@@ -103,33 +103,33 @@
             <div class="form-group text-center mt-12">
               <span class="alt-link" @click="showAuth('reset')" style="font-size:12px;color:#9ca3af">忘记密码？</span>
             </div>
-            <button type="submit" class="main-btn" :disabled="authLoading">{{ authLoading ? '登录中...' : '登录' }}</button>
+            <button type="submit" class="main-btn" :disabled="authLoading || !loginFormValid">{{ authLoading ? '登录中...' : '登录' }}</button>
           </form>
         </div>
 
         <!-- Register -->
         <div class="auth-form-container register">
-          <form class="auth-form" @submit.prevent="handleRegister">
+          <form class="auth-form" @submit.prevent="handleRegister" autocomplete="off">
             <h2>创建账号</h2>
             <div class="form-group">
               <input v-model="registerForm.email" type="email" class="form-input" placeholder="电子邮箱" required />
             </div>
             <div class="form-group">
               <div class="pwd-input-wrap">
-                <input v-model="registerForm.password" :type="regPwdVisible ? 'text' : 'password'" class="form-input" placeholder="密码" required @input="calcRegPwdStrength" />
+                <input v-model="registerForm.password" :type="regPwdVisible ? 'text' : 'password'" class="form-input" placeholder="密码" required @input="calcRegPwdStrength" autocomplete="new-password" />
                 <button type="button" class="pwd-toggle" @click="regPwdVisible = !regPwdVisible" tabindex="-1">
                   {{ regPwdVisible ? '🙈' : '👁' }}
                 </button>
               </div>
               <div class="pwd-strength" v-if="registerForm.password">
                 <div class="strength-bar">
-                  <div class="strength-seg" :style="{ background: regPwdScore >= 1 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
-                  <div class="strength-seg" :style="{ background: regPwdScore >= 2 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
-                  <div class="strength-seg" :style="{ background: regPwdScore >= 3 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
-                  <div class="strength-seg" :style="{ background: regPwdScore >= 4 ? strengthColors[regPwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(regPwdScore, 0) }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(regPwdScore, 1) }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(regPwdScore, 2) }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(regPwdScore, 3) }"></div>
                 </div>
-                <span class="strength-text" :style="{ color: regPwdScore > 0 ? strengthColors[regPwdScore - 1] : '#999' }">
-                  {{ ['', '弱', '一般', '良好', '强'][regPwdScore] }}
+                <span class="strength-text" :style="{ color: regPwdScore > 0 ? strengthColors[Math.min(regPwdScore - 1, 3)] : '#999' }">
+                  {{ strengthLabels[regPwdScore] }}
                 </span>
                 <span class="strength-hint">需包含数字、大小写字母、特殊字符且至少8位</span>
               </div>
@@ -142,7 +142,7 @@
                 </button>
               </div>
             </div>
-            <button type="submit" class="main-btn" :disabled="authLoading">{{ authLoading ? '注册中...' : '注册' }}</button>
+            <button type="submit" class="main-btn" :disabled="authLoading || !regFormValid">{{ authLoading ? '注册中...' : '注册' }}</button>
           </form>
         </div>
 
@@ -165,32 +165,32 @@
     </div>
 
     <!-- ========== Reset Pwd Modal ========== -->
-    <div class="modal-overlay" v-if="showResetModal" @click.self="closeResetModal">
+    <div class="modal-overlay" v-if="showResetModal">
       <div class="profile-modal" style="max-width:400px">
         <button class="close-btn" @click="closeResetModal">✕</button>
         <h3 style="font-size:20px;text-align:center;margin-bottom:20px">重置密码</h3>
-        <form @submit.prevent="handleResetPwd">
+        <form @submit.prevent="handleResetPwd" autocomplete="off">
           <div class="form-group">
             <label class="form-label">邮箱</label>
-            <input v-model="resetForm.email" type="email" class="form-input" placeholder="注册邮箱" required />
+            <input :value="resetForm.email" type="email" class="form-input" disabled />
           </div>
           <div class="form-group">
             <label class="form-label">新密码</label>
             <div class="pwd-input-wrap">
-              <input v-model="resetForm.newPwd" :type="resetPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required @input="calcResetPwdStrength" />
+              <input v-model="resetForm.newPwd" :type="resetPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required @input="calcResetPwdStrength" autocomplete="new-password" />
               <button type="button" class="pwd-toggle" @click="resetPwdVisible = !resetPwdVisible" tabindex="-1">
                 {{ resetPwdVisible ? '🙈' : '👁' }}
               </button>
             </div>
             <div class="pwd-strength" v-if="resetForm.newPwd">
               <div class="strength-bar">
-                <div class="strength-seg" :style="{ background: resetPwdScore >= 1 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
-                <div class="strength-seg" :style="{ background: resetPwdScore >= 2 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
-                <div class="strength-seg" :style="{ background: resetPwdScore >= 3 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
-                <div class="strength-seg" :style="{ background: resetPwdScore >= 4 ? strengthColors[resetPwdScore - 1] : '#ddd' }"></div>
+                <div class="strength-seg" :style="{ background: segColor(resetPwdScore, 0) }"></div>
+                <div class="strength-seg" :style="{ background: segColor(resetPwdScore, 1) }"></div>
+                <div class="strength-seg" :style="{ background: segColor(resetPwdScore, 2) }"></div>
+                <div class="strength-seg" :style="{ background: segColor(resetPwdScore, 3) }"></div>
               </div>
-              <span class="strength-text" :style="{ color: resetPwdScore > 0 ? strengthColors[resetPwdScore - 1] : '#999' }">
-                {{ ['', '弱', '一般', '良好', '强'][resetPwdScore] }}
+              <span class="strength-text" :style="{ color: resetPwdScore > 0 ? strengthColors[Math.min(resetPwdScore - 1, 3)] : '#999' }">
+                {{ strengthLabels[resetPwdScore] }}
               </span>
             </div>
           </div>
@@ -202,7 +202,7 @@
               </button>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" :disabled="authLoading">
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" :disabled="authLoading || !resetFormValid">
             {{ authLoading ? '提交中...' : '重置密码' }}
           </button>
         </form>
@@ -213,7 +213,7 @@
     </div>
 
     <!-- ========== Profile Modal ========== -->
-    <div class="modal-overlay" v-if="showProfileModal" @click.self="closeProfileModal">
+    <div class="modal-overlay" v-if="showProfileModal">
       <div class="profile-modal">
         <button class="close-btn" @click="closeProfileModal">✕</button>
 
@@ -255,7 +255,7 @@
 
         <!-- Info -->
         <div v-if="profileTab === 'info'">
-          <form @submit.prevent="handleUpdateProfile">
+          <form @submit.prevent="handleUpdateProfile" autocomplete="off">
             <div class="form-group">
               <label class="form-label">昵称</label>
               <input v-model="profileForm.nickname" type="text" class="form-input" placeholder="请输入昵称" maxlength="10" />
@@ -275,11 +275,11 @@
 
         <!-- Password -->
         <div v-if="profileTab === 'password'">
-          <form @submit.prevent="handleUpdatePwd">
+          <form @submit.prevent="handleUpdatePwd" autocomplete="off">
             <div class="form-group">
               <label class="form-label">当前密码</label>
               <div class="pwd-input-wrap">
-                <input v-model="pwdForm.cur_pwd" :type="profileCurPwdVisible ? 'text' : 'password'" class="form-input" placeholder="请输入当前密码" required minlength="8" />
+                <input v-model="pwdForm.cur_pwd" :type="profileCurPwdVisible ? 'text' : 'password'" class="form-input" placeholder="请输入当前密码" required minlength="8" autocomplete="current-password" />
                 <button type="button" class="pwd-toggle" @click="profileCurPwdVisible = !profileCurPwdVisible" tabindex="-1">
                   {{ profileCurPwdVisible ? '🙈' : '👁' }}
                 </button>
@@ -288,25 +288,25 @@
             <div class="form-group">
               <label class="form-label">新密码</label>
               <div class="pwd-input-wrap">
-                <input v-model="pwdForm.new_pwd" :type="profileNewPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required minlength="8" @input="calcProfilePwdStrength" />
+                <input v-model="pwdForm.new_pwd" :type="profileNewPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required minlength="8" @input="calcProfilePwdStrength" autocomplete="new-password" />
                 <button type="button" class="pwd-toggle" @click="profileNewPwdVisible = !profileNewPwdVisible" tabindex="-1">
                   {{ profileNewPwdVisible ? '🙈' : '👁' }}
                 </button>
               </div>
               <div class="pwd-strength" v-if="pwdForm.new_pwd">
                 <div class="strength-bar">
-                  <div class="strength-seg" :style="{ background: profilePwdScore >= 1 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
-                  <div class="strength-seg" :style="{ background: profilePwdScore >= 2 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
-                  <div class="strength-seg" :style="{ background: profilePwdScore >= 3 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
-                  <div class="strength-seg" :style="{ background: profilePwdScore >= 4 ? strengthColors[profilePwdScore - 1] : '#ddd' }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(profilePwdScore, 0) }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(profilePwdScore, 1) }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(profilePwdScore, 2) }"></div>
+                  <div class="strength-seg" :style="{ background: segColor(profilePwdScore, 3) }"></div>
                 </div>
-                <span class="strength-text" :style="{ color: profilePwdScore > 0 ? strengthColors[profilePwdScore - 1] : '#999' }">
-                  {{ ['', '弱', '一般', '良好', '强'][profilePwdScore] }}
+                <span class="strength-text" :style="{ color: profilePwdScore > 0 ? strengthColors[Math.min(profilePwdScore - 1, 3)] : '#999' }">
+                  {{ strengthLabels[profilePwdScore] }}
                 </span>
               </div>
               <div class="form-error" v-if="pwdSameError" style="margin-top:4px">{{ pwdSameError }}</div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%" :disabled="pwdSaving">
+            <button type="submit" class="btn btn-primary" style="width:100%" :disabled="pwdSaving || !profilePwdValid">
               {{ pwdSaving ? '提交中...' : '更新密码' }}
             </button>
           </form>
@@ -315,7 +315,7 @@
     </div>
 
     <!-- ========== Delete Confirm ========== -->
-    <div class="modal-overlay" v-if="confirmDeleteAccount" @click.self="confirmDeleteAccount = false">
+    <div class="modal-overlay" v-if="confirmDeleteAccount">
       <div class="confirm-modal">
         <h3>确认注销账户</h3>
         <p>注销后所有数据将被永久删除，包括收藏和浏览历史。此操作不可撤销。</p>
@@ -382,7 +382,35 @@
 
         // --- Toast ---
         const toast = ref({ show: false, message: '', type: 'success' });
-        const strengthColors = ['#ef4444', '#f59e0b', '#3b82f6', '#1e40af'];
+        const strengthColors = ['#ef4444', '#f97316', '#3b82f6', '#2563eb', '#2563eb'];
+        const strengthLabels = ['', '弱', '弱', '一般', '良好', '强'];
+
+        // --- Password Strength (0-5) ---
+        function calcPwdScore(pwd) {
+          if (!pwd) return 0;
+          let score = 0;
+          if (pwd.length >= 8) score++;
+          if (/[a-z]/.test(pwd)) score++;
+          if (/[A-Z]/.test(pwd)) score++;
+          if (/[0-9]/.test(pwd)) score++;
+          if (/[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]/.test(pwd)) score++;
+          return score;
+        }
+        function segColor(score, segIdx) {
+          // segIdx: 0-based segment index (0..3)
+          // Returns color if this segment should be lit
+          if (score <= 0) return '#ddd';
+          // For score 5, show all 4 segments green
+          const effective = score >= 5 ? 4 : score;
+          const idx = segIdx < effective ? Math.min(effective - 1, strengthColors.length - 1) : -1;
+          return idx >= 0 ? strengthColors[idx] : '#ddd';
+        }
+        function calcRegPwdStrength() { regPwdScore.value = calcPwdScore(registerForm.value.password); }
+        function calcResetPwdStrength() { resetPwdScore.value = calcPwdScore(resetForm.value.newPwd); }
+        function calcProfilePwdStrength() {
+          profilePwdScore.value = calcPwdScore(pwdForm.value.new_pwd);
+          pwdSameError.value = (pwdForm.value.new_pwd && pwdForm.value.cur_pwd === pwdForm.value.new_pwd) ? '新密码不能与当前密码相同' : '';
+        }
 
         // --- Computed ---
         const totalPages = computed(() => Math.ceil(total.value / pageSize.value) || 0);
@@ -397,38 +425,28 @@
           pages.push(tp);
           return pages;
         });
-
         const avatarSrc = computed(() => {
           if (user.value && user.value.avatar) return avatarUrl(user.value.avatar);
           return 'https://via.placeholder.com/38';
         });
-
-        // --- Modal count (for scroll lock) ---
         const anyModalOpen = computed(() =>
           showAuthModal.value || showResetModal.value || showProfileModal.value || confirmDeleteAccount.value
         );
+        watch(anyModalOpen, v => { document.body.classList.toggle('modal-open', v); });
 
-        watch(anyModalOpen, v => {
-          document.body.classList.toggle('modal-open', v);
-        });
-
-        // --- Password Strength ---
-        function calcPwdScore(pwd) {
-          if (!pwd) return 0;
-          let score = 0;
-          if (pwd.length >= 8) score++;
-          if (/[a-z]/.test(pwd)) score++;
-          if (/[A-Z]/.test(pwd)) score++;
-          if (/[0-9]/.test(pwd)) score++;
-          if (/[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]/.test(pwd)) score++;
-          return Math.min(score, 4);
-        }
-        function calcRegPwdStrength() { regPwdScore.value = calcPwdScore(registerForm.value.password); }
-        function calcResetPwdStrength() { resetPwdScore.value = calcPwdScore(resetForm.value.newPwd); }
-        function calcProfilePwdStrength() {
-          profilePwdScore.value = calcPwdScore(pwdForm.value.new_pwd);
-          pwdSameError.value = (pwdForm.value.new_pwd && pwdForm.value.cur_pwd === pwdForm.value.new_pwd) ? '新密码不能与当前密码相同' : '';
-        }
+        const emailValid = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em || '');
+        const regFormValid = computed(() =>
+          emailValid(registerForm.value.email) && calcPwdScore(registerForm.value.password) >= 5 && registerForm.value.code.length > 0
+        );
+        const loginFormValid = computed(() =>
+          emailValid(loginForm.value.email) && loginForm.value.password.length > 0
+        );
+        const resetFormValid = computed(() =>
+          emailValid(resetForm.value.email) && calcPwdScore(resetForm.value.newPwd) >= 5 && resetForm.value.code.length > 0
+        );
+        const profilePwdValid = computed(() =>
+          pwdForm.value.cur_pwd.length >= 8 && calcPwdScore(pwdForm.value.new_pwd) >= 5 && pwdForm.value.cur_pwd !== pwdForm.value.new_pwd
+        );
 
         // --- Helpers ---
         function showToast(msg, type = 'success') {
@@ -477,11 +495,16 @@
         // --- Auth ---
         function showAuth(mode) {
           authMode.value = mode;
+          if (mode === 'reset') {
+            resetForm.value.email = loginForm.value.email || '';
+            showAuthModal.value = false;
+            showResetModal.value = true;
+            return;
+          }
           resetLoginForm();
           resetRegisterForm();
           showResetModal.value = false;
           showAuthModal.value = true;
-          if (mode === 'reset') { showAuthModal.value = false; showResetModal.value = true; }
         }
         function closeAuthModal() { showAuthModal.value = false; resetLoginForm(); resetRegisterForm(); }
         function closeResetModal() { showResetModal.value = false; resetResetForm(); }
@@ -499,21 +522,21 @@
 
         async function handleRegister() {
           if (!registerForm.value.email || !registerForm.value.password || !registerForm.value.code) { showToast('请填写完整信息', 'error'); return; }
-          if (calcPwdScore(registerForm.value.password) < 4) { showToast('密码强度不足，请按照提示设置密码', 'error'); return; }
+          if (calcPwdScore(registerForm.value.password) < 5) { showToast('密码强度不足，请按照提示设置密码', 'error'); return; }
           authLoading.value = true;
           try {
             await UserAPI.register(registerForm.value);
+            const regEmail = registerForm.value.email;
             showToast('注册成功，请登录');
             showAuth('login');
-            loginForm.value.email = registerForm.value.email;
-            registerForm.value = { email: '', password: '', code: '' };
+            loginForm.value.email = regEmail;
           } catch (e) { showToast(e.message, 'error'); }
           finally { authLoading.value = false; }
         }
 
         async function handleResetPwd() {
           if (!resetForm.value.email || !resetForm.value.newPwd || !resetForm.value.code) { showToast('请填写完整', 'error'); return; }
-          if (calcPwdScore(resetForm.value.newPwd) < 4) { showToast('新密码强度不足', 'error'); return; }
+          if (calcPwdScore(resetForm.value.newPwd) < 5) { showToast('新密码强度不足', 'error'); return; }
           authLoading.value = true;
           try {
             await UserAPI.resetPwd({ email: resetForm.value.email, code: resetForm.value.code, newPwd: resetForm.value.newPwd });
@@ -574,10 +597,15 @@
         }
 
         function onAvatarFileChange(e) {
-          if (e.target.files && e.target.files[0]) {
-            avatarFile.value = e.target.files[0];
-            profileForm.value.avatarPreview = URL.createObjectURL(e.target.files[0]);
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          if (file.size > 5 * 1024 * 1024) {
+            showToast('图片大小不能超过 5MB', 'error');
+            e.target.value = '';
+            return;
           }
+          avatarFile.value = file;
+          profileForm.value.avatarPreview = URL.createObjectURL(file);
         }
 
         async function handleUpdateProfile() {
@@ -604,7 +632,7 @@
         async function handleUpdatePwd() {
           if (!pwdForm.value.cur_pwd || !pwdForm.value.new_pwd) { showToast('请填写完整', 'error'); return; }
           if (pwdForm.value.cur_pwd === pwdForm.value.new_pwd) { showToast('新密码不能与当前密码相同', 'error'); return; }
-          if (calcPwdScore(pwdForm.value.new_pwd) < 4) { showToast('新密码强度不足', 'error'); return; }
+          if (calcPwdScore(pwdForm.value.new_pwd) < 5) { showToast('新密码强度不足', 'error'); return; }
           pwdSaving.value = true;
           try {
             await UserAPI.updatePwd(pwdForm.value);
@@ -643,7 +671,8 @@
           showProfileModal, profileTab, profileForm, avatarFile, profileSaving,
           pwdForm, profileCurPwdVisible, profileNewPwdVisible, profilePwdScore, pwdSameError, pwdSaving,
           confirmDeleteAccount, deletingAccount, favCount, histCount,
-          toast, totalPages, displayedPages, avatarSrc, strengthColors,
+          toast, totalPages, displayedPages, avatarSrc, strengthColors, strengthLabels, segColor,
+          loginFormValid, regFormValid, resetFormValid, profilePwdValid,
           calcRegPwdStrength, calcResetPwdStrength, calcProfilePwdStrength,
           showToast, formatDate,
           selectCategory, goPage, goHome, goDetail, goFavorites, goHistory,

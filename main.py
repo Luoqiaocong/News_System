@@ -18,19 +18,19 @@ from models import * # 确保所有模型都被导入过
 async def lifespan(app: FastAPI):
     # 1. 建立 Redis 连接
     await redis_client.init_redis()
-    print("Redis 连接成功，准备开始预热缓存...")
+    # print("Redis 连接成功，准备开始预热缓存...")
     
-    # 2. 使用真正的异步上下文管理器获取 db 实例
-    async with AsyncSessionLocal() as db:
-        try:
-            pass
-            # 传入真正的异步 db 对象进行预热
-            await warmup_all_categories_and_news(db)
-        except Exception as e:
-            print(f"❌ 预热过程中发生异常: {e}")
-            # 打印详细报错堆栈，方便看清具体哪个字段卡住了
-            import traceback
-            traceback.print_exc()
+    # # 2. 使用真正的异步上下文管理器获取 db 实例
+    # async with AsyncSessionLocal() as db:
+    #     try:
+    #         pass
+    #         # 传入真正的异步 db 对象进行预热
+    #         await warmup_all_categories_and_news(db)
+    #     except Exception as e:
+    #         print(f"❌ 预热过程中发生异常: {e}")
+    #         # 打印详细报错堆栈，方便看清具体哪个字段卡住了
+    #         import traceback
+    #         traceback.print_exc()
 
     yield
     # 3. 关闭时释放 Redis

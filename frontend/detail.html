@@ -86,11 +86,11 @@
           <div v-for="r in relatedNews" :key="r.id"
             style="background:white;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:all var(--transition);border:1px solid transparent"
             @click="goDetail(r.id)"
-            @mouseenter="$event.currentTarget.style.borderColor='rgba(30,64,175,0.2)';$event.currentTarget.style.transform='translateY(-2px)'"
+            @mouseenter="$event.currentTarget.style.borderColor='rgba(37,99,235,0.2)';$event.currentTarget.style.transform='translateY(-2px)'"
             @mouseleave="$event.currentTarget.style.borderColor='transparent';$event.currentTarget.style.transform='translateY(0)'"
           >
             <img v-if="r.thumbnail" :src="r.thumbnail" :alt="r.title" style="width:100%;height:130px;object-fit:cover" />
-            <div v-else style="width:100%;height:130px;background:linear-gradient(135deg,#3b82f630,#8b5cf630);display:flex;align-items:center;justify-content:center;font-size:32px">📄</div>
+            <div v-else style="width:100%;height:130px;background:linear-gradient(135deg,#2563eb20,#7c3aed20);display:flex;align-items:center;justify-content:center;font-size:32px">📄</div>
             <div style="padding:12px 14px">
               <div style="font-size:13px;font-weight:500;color:var(--gray-700);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5">{{ r.title }}</div>
               <div style="font-size:11px;color:var(--gray-400);margin-top:6px;display:flex;justify-content:space-between">

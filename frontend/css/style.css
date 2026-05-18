@@ -8,34 +8,37 @@
 }
 
 :root {
-  --primary: #1e40af;
-  --primary-dark: #1e3a8a;
-  --primary-light: rgba(30, 64, 175, 0.08);
-  --primary-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: rgba(37, 99, 235, 0.08);
+  --primary-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
+  --accent: #f97316;
+  --accent-light: rgba(249, 115, 22, 0.08);
+  --accent-gradient: linear-gradient(135deg, #f97316, #ef4444);
   --danger: #ef4444;
   --danger-light: #fef2f2;
   --success: #10b981;
   --warning: #f59e0b;
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
+  --gray-50: #fafaf9;
+  --gray-100: #f5f5f4;
+  --gray-200: #e7e5e4;
+  --gray-300: #d6d3d1;
+  --gray-400: #a8a29e;
+  --gray-500: #78716c;
+  --gray-600: #57534e;
+  --gray-700: #44403c;
+  --gray-800: #292524;
+  --gray-900: #1c1917;
   --white: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.1);
   --radius: 8px;
   --radius-lg: 16px;
   --radius-xl: 20px;
-  --transition: 0.3s ease;
+  --transition: 0.25s ease;
 }
 
 body {
@@ -133,12 +136,12 @@ a:hover {
 .btn-primary {
   background: var(--primary-gradient);
   color: var(--white);
-  box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .btn-outline {
@@ -221,7 +224,7 @@ a:hover {
   background: var(--primary-gradient);
   color: var(--white);
   border-color: transparent;
-  box-shadow: 0 2px 10px rgba(30, 64, 175, 0.25);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
 }
 
 /* ==================== News Grid ==================== */
@@ -246,7 +249,7 @@ a:hover {
 .news-card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-4px);
-  border-color: rgba(30, 64, 175, 0.2);
+  border-color: rgba(37, 99, 235, 0.2);
 }
 
 .news-card-thumb {
@@ -259,7 +262,7 @@ a:hover {
 .news-card-thumb-placeholder {
   width: 100%;
   height: 190px;
-  background: linear-gradient(135deg, #3b82f630, #8b5cf630);
+  background: linear-gradient(135deg, #2563eb20, #7c3aed20);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -454,7 +457,7 @@ a:hover {
 
 .auth-form .form-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background: var(--white);
 }
 
@@ -470,12 +473,12 @@ a:hover {
   cursor: pointer;
   transition: all var(--transition);
   margin-top: 20px;
-  box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
 .auth-form .main-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .auth-form .main-btn:active {
@@ -657,7 +660,7 @@ a:hover {
   cursor: pointer;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(30, 64, 175, 0.2);
+  border: 2px solid rgba(37, 99, 235, 0.2);
   transition: border-color var(--transition), transform var(--transition);
 }
 
@@ -832,7 +835,7 @@ a:hover {
 
 .form-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .form-input:disabled {
@@ -1115,7 +1118,12 @@ a:hover {
 
 .profile-stat-card:hover {
   background: var(--primary-light);
-  border-color: rgba(30, 64, 175, 0.3);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.profile-stat-card:last-child:hover {
+  background: var(--accent-light);
+  border-color: rgba(249, 115, 22, 0.25);
 }
 
 .profile-stat-card .count {
@@ -1137,6 +1145,33 @@ a:hover {
 /* ==================== Body scroll lock ==================== */
 body.modal-open {
   overflow: hidden;
+}
+
+/* ==================== Favorite Button ==================== */
+.fav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--gray-200);
+  border-radius: 25px;
+  background: var(--white);
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.fav-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.fav-btn.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: rgba(249, 115, 22, 0.3);
 }
 
 /* ==================== Utility ==================== */

@@ -30,7 +30,7 @@ class NewsRouterAPI:
 
     @router.get("/list",summary="获取新闻数据")
     async def get_news(self,
-            category_id: Annotated[int,Query(ge=1,description="新闻类型ID", alias="categoryId")]=None,
+            category_id: Annotated[Optional[int], Query(ge=1, description="新闻类型ID", alias="categoryId")] = None,
             page: int = 1,
             page_size: int = Query(10, lt=50, description="每页新闻数量", alias="pagesize"),
     ):
@@ -41,17 +41,7 @@ class NewsRouterAPI:
     async def get_news_detail(self,
             news_id: int = Path(..., description="新闻ID"),
     ):
-        return await self.service.get_news_detail(news_id) # 获取新闻详情及相关推荐新闻
-        await self.service.handle_news_view(news_id, self.current_user)   # 处理浏览量和浏览历史
-        pass
-        # news_detail = await NewsRepo.get_news_detail(db, news_id)
-        #
-        # related_news = await NewsRepo.get_related_news(db, news_id, news_detail.category_id)
-        #
-        # detail_data = NewsData.model_validate(news_detail)
-        # related_data = [NewsData.model_validate(news) for news in related_news]
-        #
-        # await NewsService.handle_news_view(db, news_id, user)   # 处理浏览量和浏览历史
-        #
-        # return success_response(data={"detail": detail_data, "related_news": related_data})
+        result = await self.service.get_news_detail(news_id)
+        await self.service.handle_news_view(news_id, self.current_user)
+        return success_response(data=result)
 

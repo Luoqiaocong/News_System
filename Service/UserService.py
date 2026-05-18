@@ -83,11 +83,11 @@ class UserService:
         if existing_user:
             raise UserException(code=ResponseCode.USER_EXIST)
 
+        # 密码强度校验（先校验密码，避免消耗验证码后因密码弱而失败）
+        SecurityUtil.validate_password_strength(userdata.password)
+
         # 验证码校验
         await self._verify_code(userdata.email, userdata.code)
-
-        # 密码强度校验
-        SecurityUtil.validate_password_strength(userdata.password)
 
         await self.repo.create(userdata)
 
@@ -145,7 +145,7 @@ class UserService:
 
         if not updated_user:
             raise UserException(code=ResponseCode.USER_NOT_FOUND)
-        return UserInfo.model_validate(updated_user)
+        # return UserInfo.model_validate(updated_user)
 
     @transactional
     async def update_user_password(self, pwd_data: UserPwdAuth, user: User):
@@ -163,10 +163,11 @@ class UserService:
     @transactional
     async def reset_user_password(self, user_request: UserPwdResetAuth):
         log.info(f"{user_request.email}请求重置密码")
-        await self._verify_code(user_request.email, user_request.code)
 
+        # 先校验密码强度，避免消耗验证码后失败
         SecurityUtil.validate_password_strength(user_request.new_pwd)
 
+        await self._verify_code(user_request.email, user_request.code)
         user = await self._get_user_by_email(user_request.email)
         await self.repo.change_password(user_request.new_pwd, user)
         log.info(f"{user.email}重置密码成功")

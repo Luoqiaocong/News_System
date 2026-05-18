@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import NewsException, ResponseCode
 from Repo import NewsRepo, NewsCacheRepo,UserHistoryRepo
-from Schemas.NewsSchema import CategoryData, NewsData, NewsListResponse, NewsListCard
+from Schemas.NewsSchema import CategoryData, NewsData, NewsListResponse, NewsListCard, RelatedNewsCard
 from Schemas.UserSchema import UserInfo
 from Utils.CommonUtil import handle_service_exception
-from Utils.RedisUtil import redis_client, redis_cache_decorator
+from Utils.RedisUtil import redis_cache_decorator
 from Utils.LogUtil import log
 
 
@@ -59,31 +59,38 @@ class NewsService:
             news_list=[NewsListCard.model_validate(json.loads(detail)) for detail in news_detail_lt if detail],
             total=total)
 
+    @handle_service_exception(pass_through_exceptions=(NewsException,))
     async def get_news_detail(self, news_id:int):
-       # 尝试从Redis获取新闻详情
-        detail_key = f"news:detail:{news_id}"
-        cached_detail = await NewsCacheRepo.get_news_detail_cache(news_id, detail_key)
-        if cached_detail:
-            # 缓存命中，解析数据获取category_id
-            detail_dict = json.loads(cached_detail) if isinstance(cached_detail, str) else cached_detail
+        # ====== 1. 新闻详情（先缓存，后 DB）======
+        detail_dict = await NewsCacheRepo.get_detail_cache(news_id)
+        if detail_dict:
+            # 缓存命中
             category_id = detail_dict.get("category_id")
         else:
-            # 缓存未命中，从数据库获取
+            # 缓存未命中，走 DB
             detail_orm = await self.repo.get_news_detail(news_id)
             if not detail_orm:
                 raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
-
             category_id = detail_orm.category_id
-            # 将ORM对象转换为字典并缓存
             detail_dict = NewsData.model_validate(detail_orm).model_dump()
-            await redis_client.set(detail_key, detail_dict, expire=3600)
+            # 写回缓存
+            await NewsCacheRepo.set_detail_cache(news_id, detail_dict)
 
-        # 获取相关新闻
-        related_news = await self.repo.get_related_news(news_id, category_id)
+        # ====== 2. 相关新闻（先 Redis Set SRANDMEMBER，后 DB ORDER BY RAND()）======
+        related = await NewsCacheRepo.get_related_news_cache(category_id, news_id)
+        if related is None:
+            # 缓存未命中，走 DB
+            related = await self.repo.get_related_news(news_id, category_id)
+            # 用刚取到的新闻 ID 增量预热 Set，不额外查全表
+            related_ids = [i.id for i in related]
+            if related_ids:
+                await NewsCacheRepo.warm_related_news(category_id, related_ids)
 
-        # 返回新闻详情（包含相关新闻）
-        result = NewsData.model_validate(detail_dict)
-        return result
+        # ====== 3. 打包返回 ======
+        return {
+            "detail": detail_dict,
+            "related_news": [RelatedNewsCard.model_validate(item) for item in related]
+        }
 
     async def handle_news_view(
             self,
