@@ -8,10 +8,10 @@ from fastapi import HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import NewsException, ResponseCode
-from Repo import NewsRepo, NewsCacheRepo,UserHistoryRepo
+from Repo import NewsRepo, NewsCacheRepo, UserHistRepo
 from Schemas.NewsSchema import CategoryData, NewsData, NewsDetailResponse, NewsListResponse, NewsListCard, RelatedNewsCard
 from Schemas.UserSchema import UserInfo
-from Utils.CommonUtil import handle_service_exception
+from Utils.ServiceDecorator import handle_service_exception
 from Utils.RedisUtil import redis_cache_decorator
 from Utils.LogUtil import log
 from models.UserNewsHistory import UserNewsHistory
@@ -20,7 +20,7 @@ from models.UserNewsHistory import UserNewsHistory
 class NewsService:
     def __init__(self,
                 repo: Annotated[NewsRepo, Depends()],
-                Histrepo:Annotated[UserHistoryRepo, Depends()],
+                Histrepo:Annotated[UserHistRepo, Depends()],
                 db: Annotated[AsyncSession, Depends(get_db)]):
         self.repo = repo
         self.histrepo = Histrepo

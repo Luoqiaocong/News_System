@@ -23,13 +23,13 @@ class NewsException(BaseBusinessException):
         super().__init__(code=code, msg=msg, data=data)
 
 
-class UserFavoriteException(BaseBusinessException):
+class UserFavException(BaseBusinessException):
     """收藏模块异常"""
     def __init__(self, code: ResponseCode = ResponseCode.FAVORITE_DUPLICATE, msg: str = None, data: Any = None):
         super().__init__(code=code, msg=msg, data=data)
 
 
-class UserHistoryException(BaseBusinessException):
+class UserHistException(BaseBusinessException):
     """浏览历史模块异常"""
     def __init__(self, code: ResponseCode = ResponseCode.HISTORY_NOT_FOUND, msg: str = None, data: Any = None):
         super().__init__(code=code, msg=msg, data=data)

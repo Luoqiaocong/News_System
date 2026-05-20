@@ -6,7 +6,7 @@ from starlette.responses import RedirectResponse
 from Config.DataBaseConfig import get_db, AsyncSessionLocal
 from Dependency.register_exception import register_exception
 from MIddleware import PerformanceMiddleware,UnifiedResponseMiddleware
-from Router import NewsRouter, UserRouter, UserFavoriteRouter, UserHistoryRouter, CommonRouter
+from Router import NewsRouter, UserRouter, UserFavRouter, UserHistRouter, CommonRouter
 from Test.fileTest import router as test_router
 from Test.newsMock import warmup_all_categories_and_news
 from Utils.LogUtil import init_log
@@ -40,8 +40,8 @@ app = FastAPI(lifespan=lifespan)
 # 注册路由
 app.include_router(NewsRouter.router)
 app.include_router(UserRouter.router)
-app.include_router(UserFavoriteRouter.router)
-app.include_router(UserHistoryRouter.router)
+app.include_router(UserFavRouter.router)
+app.include_router(UserHistRouter.router)
 app.include_router(CommonRouter.router)
 app.include_router(test_router)
 

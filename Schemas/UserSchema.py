@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field, HttpUrl, EmailStr, field_serializer
 
-from Utils import SecurityUtil
+from Utils.HashUtil import get_hashed_id
 
 
 class UserIdentity(BaseModel):
@@ -37,7 +37,7 @@ class UserInfo(UserIdentity, UserProfileBase):
 
     @field_serializer('id')
     def serialize_id(self, id: int, _info):
-        return SecurityUtil.get_hashed_id(id)
+        return get_hashed_id(id)
 
     model_config = {"from_attributes": True}
 

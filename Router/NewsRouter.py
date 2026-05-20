@@ -23,14 +23,14 @@ class NewsRouterAPI:
 
     @router.get("/categories",summary="获取新闻分类")
     async def get_categories(self,
-            category_id: Annotated[int, Query(ge=1, description="新闻类型id",alias="categoryId")] = None, # 可以不传，传了就得大于0
+            category_id: Annotated[int, Query(ge=1, description="新闻类型id",alias="categoryId")] = None, # 可以不传，传了就得大于0 # type: ignore
     ):
         return await self.service.get_news_categories(category_id)
 
 
     @router.get("/list",summary="获取新闻数据")
     async def get_news(self,
-            category_id: Annotated[int, Query(ge=1, description="新闻类型ID", alias="categoryId")]=None,
+            category_id: Annotated[int, Query(ge=1, description="新闻类型ID", alias="categoryId")]=None, # type: ignore
             page: Annotated[int, Query(ge=1, description="页码", alias="page")] = 1,
             page_size: Annotated[int, Query(ge=1, le=50, description="每页新闻数量", alias="pagesize")] = 10,
     ):

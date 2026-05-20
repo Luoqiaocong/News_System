@@ -74,7 +74,7 @@ async def warmup_all_categories_and_news(db: AsyncSession):
             })
 
             # 直接设置详情缓存，过期时间 86400 秒（1天）
-            await redis_client.set(detail_key, news_json, expire=86400)
+            await redis_client.set(detail_key, news_json, expire=864000000000)
 
         # 批量添加 ZSet 数据
         if category_zset_data:

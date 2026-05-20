@@ -1,16 +1,19 @@
 from Repo.UserRepo import UserRepo
-from Repo.UserHistoryRepo import UserHistoryRepo
-from Repo.UserFavoriteRepo import UserFavoriteRepo
+from Repo.UserHistRepo import UserHistRepo
+from Repo.UserFavRepo import UserFavRepo
 from Repo.NewsRepo import NewsRepo
 from Repo.NewsCacheRepo import NewsCacheRepo
-
+from Repo.UserFavCacheRepo import UserFavCacheRepo
+from Repo.UserHistCacheRepo import UserHistCacheRepo
 
 
 
 __all__ = [
     "UserRepo",
-    "UserHistoryRepo",
-    "UserFavoriteRepo",
+    "UserHistRepo",
+    "UserFavRepo",
     "NewsRepo",
-    "NewsCacheRepo"
+    "NewsCacheRepo",
+    "UserFavCacheRepo",
+    "UserHistCacheRepo"
 ]

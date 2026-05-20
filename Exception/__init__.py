@@ -8,8 +8,8 @@ from Exception.BusinessException import (
     BaseBusinessException,
     UserException,
     NewsException,
-    UserFavoriteException,
-    UserHistoryException
+    UserFavException,
+    UserHistException
 )
 
 # __all__ 是 Python 模块中的一个特殊变量，它的作用是控制“白名单”。
@@ -20,6 +20,6 @@ __all__ = [
     "BaseBusinessException",
     "UserException",
     "NewsException",
-    "UserFavoriteException",
-    "UserHistoryException"
+    "UserFavException",
+    "UserHistException"
 ]

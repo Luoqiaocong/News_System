@@ -13,7 +13,8 @@ from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserInfo, 
     UserPwdAuth, UserPwdResetAuth
 from Utils import SecurityUtil
 from Utils.LogUtil import log
-from Utils.SecurityUtil import create_access_token
+from Utils.JWTUtil import create_access_token
+from Utils.HashUtil import get_hashed_id
 from Utils.FileUtil import upload_file
 from models.User import User
 from Utils.RedisUtil import redis_client
@@ -97,7 +98,7 @@ class UserService:
         if not user:
             raise UserException(code=ResponseCode.USER_PASSWORD_ERROR)
 
-        new_token = create_access_token({"sub": SecurityUtil.get_hashed_id(user.id)})
+        new_token = create_access_token({"sub": get_hashed_id(user.id)})
         '''
         事实上jwt是无状态的，可以不存数据库，但是如果要实现黑名单，就得使用Redis；
         现在是为了调试，因为我客户端还没做

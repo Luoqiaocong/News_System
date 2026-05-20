@@ -92,7 +92,7 @@ class NewsRepo:
         await self.db.flush()
 
         # 返回是否更新成功（受影响的行数大于0表示成功）
-        return result.rowcount > 0
+        return result.rowcount > 0 # type: ignore
 
     async def get_related_news(self,news_id: int, category_id: int):
         """
