@@ -22,6 +22,12 @@
             <span class="wave">🕐</span>
             {{ user.nickname || user.email?.split('@')[0] }}
           </span>
+          <img
+            v-if="loggedIn"
+            :src="avatarSrc"
+            class="header-avatar"
+            title="个人中心"
+          />
           <button class="btn btn-ghost btn-sm" @click="goHome">← 返回首页</button>
         </div>
       </div>
@@ -71,12 +77,12 @@
           </thead>
           <tbody>
             <tr v-for="item in list" :key="item.historyId">
-              <td><input type="checkbox" :value="item.historyId" v-model="selectedIds" /></td>
+              <td><input type="checkbox" :value="item.id" v-model="selectedIds" /></td>
               <td><span class="news-title-cell" @click="goDetail(item.id)">{{ item.title }}</span></td>
               <td>{{ item.author }}</td>
               <td>{{ item.views }}</td>
               <td>{{ formatDate(item.viewTime) }}</td>
-              <td><button class="btn btn-danger btn-sm" style="border-radius:10px" @click="removeOne(item.historyId)">删除</button></td>
+              <td><button class="btn btn-danger btn-sm" style="border-radius:10px" @click="removeOne(item.id)">删除</button></td>
             </tr>
           </tbody>
         </table>
@@ -107,10 +113,15 @@
         const selectedIds = ref([]);
         const toast = ref({ show: false, message: '', type: 'success' });
 
+        const avatarSrc = computed(() => {
+          if (user.value && user.value.avatar) return avatarUrl(user.value.avatar);
+          return 'https://via.placeholder.com/38';
+        });
+
         const totalPages = computed(() => Math.ceil(total.value / pageSize.value) || 0);
         const allSelected = computed({
           get: () => list.value.length > 0 && selectedIds.value.length === list.value.length,
-          set: v => { if (v) selectedIds.value = list.value.map(o => o.historyId); else selectedIds.value = []; }
+          set: v => { if (v) selectedIds.value = list.value.map(o => o.id); else selectedIds.value = []; }
         });
 
         const pageNumbers = computed(() => {
@@ -162,7 +173,7 @@
           catch (e) { showToast(e.message, 'error'); }
         }
 
-        function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
+        function goDetail(id) { window.location.href = 'detail.html?id=' + id + '&from=history'; }
         function goHome() { window.location.href = 'index.html'; }
         function goFavorites() { window.location.href = 'favorites.html'; }
 
@@ -176,7 +187,7 @@
         });
 
         return {
-          loggedIn, user, list, total, page, loading, selectedIds, toast,
+          loggedIn, user, avatarSrc, list, total, page, loading, selectedIds, toast,
           totalPages, allSelected, pageNumbers,
           formatDate, fetchList, goPage, toggleAll,
           removeOne, batchRemove, clearAll, goDetail, goHome, goFavorites,

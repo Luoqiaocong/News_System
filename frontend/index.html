@@ -131,7 +131,7 @@
                 <span class="strength-text" :style="{ color: regPwdScore > 0 ? strengthColors[Math.min(regPwdScore - 1, 3)] : '#999' }">
                   {{ strengthLabels[regPwdScore] }}
                 </span>
-                <span class="strength-hint">需包含数字、大小写字母、特殊字符且至少8位</span>
+                <span class="strength-hint">需包含数字、大小写字母且至少8位</span>
               </div>
             </div>
             <div class="form-group">
@@ -382,8 +382,8 @@
 
         // --- Toast ---
         const toast = ref({ show: false, message: '', type: 'success' });
-        const strengthColors = ['#ef4444', '#f97316', '#3b82f6', '#2563eb', '#2563eb'];
-        const strengthLabels = ['', '弱', '弱', '一般', '良好', '强'];
+        const strengthColors = ['#ef4444', '#f97316', '#3b82f6', '#2563eb'];
+        const strengthLabels = ['', '弱', '弱', '一般', '强'];
 
         // --- Password Strength (0-5) ---
         function calcPwdScore(pwd) {
@@ -393,16 +393,12 @@
           if (/[a-z]/.test(pwd)) score++;
           if (/[A-Z]/.test(pwd)) score++;
           if (/[0-9]/.test(pwd)) score++;
-          if (/[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]/.test(pwd)) score++;
           return score;
         }
         function segColor(score, segIdx) {
-          // segIdx: 0-based segment index (0..3)
-          // Returns color if this segment should be lit
           if (score <= 0) return '#ddd';
-          // For score 5, show all 4 segments green
-          const effective = score >= 5 ? 4 : score;
-          const idx = segIdx < effective ? Math.min(effective - 1, strengthColors.length - 1) : -1;
+          const effective = score >= 4 ? 4 : score;
+          const idx = segIdx < effective ? Math.min(effective - 1, 3) : -1;
           return idx >= 0 ? strengthColors[idx] : '#ddd';
         }
         function calcRegPwdStrength() { regPwdScore.value = calcPwdScore(registerForm.value.password); }
@@ -436,16 +432,16 @@
 
         const emailValid = (em) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em || '');
         const regFormValid = computed(() =>
-          emailValid(registerForm.value.email) && calcPwdScore(registerForm.value.password) >= 5 && registerForm.value.code.length > 0
+          emailValid(registerForm.value.email) && calcPwdScore(registerForm.value.password) >= 4 && registerForm.value.code.length > 0
         );
         const loginFormValid = computed(() =>
           emailValid(loginForm.value.email) && loginForm.value.password.length > 0
         );
         const resetFormValid = computed(() =>
-          emailValid(resetForm.value.email) && calcPwdScore(resetForm.value.newPwd) >= 5 && resetForm.value.code.length > 0
+          emailValid(resetForm.value.email) && calcPwdScore(resetForm.value.newPwd) >= 4 && resetForm.value.code.length > 0
         );
         const profilePwdValid = computed(() =>
-          pwdForm.value.cur_pwd.length >= 8 && calcPwdScore(pwdForm.value.new_pwd) >= 5 && pwdForm.value.cur_pwd !== pwdForm.value.new_pwd
+          pwdForm.value.cur_pwd.length >= 8 && calcPwdScore(pwdForm.value.new_pwd) >= 4 && pwdForm.value.cur_pwd !== pwdForm.value.new_pwd
         );
 
         // --- Helpers ---

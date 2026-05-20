@@ -18,15 +18,14 @@
           <span>Seven新闻</span>
         </div>
         <div class="header-actions">
-          <template v-if="loggedIn">
-            <img
-              :src="avatarSrc"
-              class="header-avatar"
-              @click="goHome"
-              title="返回首页"
-            />
-          </template>
-          <button class="btn btn-ghost btn-sm" @click="goHome">← 返回首页</button>
+          <span class="header-nickname" v-if="loggedIn">{{ user.nickname || user.email?.split('@')[0] }}</span>
+          <img
+            v-if="loggedIn"
+            :src="avatarSrc"
+            class="header-avatar"
+            @click="goHome"
+            title="返回首页"
+          />
         </div>
       </div>
     </header>
@@ -47,6 +46,8 @@
 
     <!-- Detail Content -->
     <main class="container" v-else>
+      <a class="back-link" @click="goBack">{{ backLabel }}</a>
+
       <article style="max-width:800px;margin:0 auto">
         <h1 style="font-size:28px;font-weight:700;line-height:1.5;margin-bottom:20px;color:var(--gray-900)">{{ detail.title }}</h1>
 
@@ -54,6 +55,15 @@
           <span style="font-weight:500;color:var(--gray-700)">{{ detail.author }}</span>
           <span>{{ formatDate(detail.publish_time) }}</span>
           <span>{{ detail.views }} 阅读</span>
+          <button
+            v-if="loggedIn"
+            @click="toggleFavorite"
+            class="fav-inline"
+            :class="{ active: isFavorited }"
+          >
+            {{ isFavorited ? '❤️' : '🤍' }}
+            {{ isFavorited ? '已收藏' : '收藏' }}
+          </button>
         </div>
 
         <img v-if="detail.thumbnail" :src="detail.thumbnail" :alt="detail.title"
@@ -62,18 +72,6 @@
         <div style="font-size:16px;line-height:2;color:var(--gray-700);word-break:break-word"
           v-html="detail.content"></div>
 
-        <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--gray-200);display:flex;gap:12px;align-items:center">
-          <button
-            v-if="loggedIn"
-            @click="toggleFavorite"
-            class="fav-btn"
-            :class="{ active: isFavorited }"
-          >
-            <span>{{ isFavorited ? '❤️' : '🤍' }}</span>
-            {{ isFavorited ? '已收藏' : '收藏' }}
-          </button>
-          <button class="btn btn-outline btn-sm" @click="goHome">← 返回首页</button>
-        </div>
       </article>
 
       <!-- Related News -->
@@ -120,6 +118,8 @@
         const loggedIn = ref(false);
         const user = ref({});
         const toast = ref({ show: false, message: '', type: 'success' });
+        const backUrl = ref('index.html');
+        const backLabel = ref('← 返回首页');
 
         const avatarSrc = computed(() => {
           if (user.value.avatar) return avatarUrl(user.value.avatar);
@@ -183,9 +183,19 @@
           window.location.href = 'index.html';
         }
 
+        function goBack() { window.location.href = backUrl.value; }
+
         onMounted(async () => {
           const params = new URLSearchParams(window.location.search);
           newsId.value = parseInt(params.get('id')) || 0;
+          if (params.get('from') === 'favorites') {
+            backUrl.value = 'favorites.html';
+            backLabel.value = '← 返回收藏';
+          }
+          if (params.get('from') === 'history') {
+            backUrl.value = 'history.html';
+            backLabel.value = '← 返回历史';
+          }
           if (!newsId.value) { loading.value = false; return; }
 
           if (window.isLoggedIn()) {
@@ -198,8 +208,8 @@
         });
 
         return {
-          detail, relatedNews, isFavorited, loading, loggedIn, user, avatarSrc, toast,
-          formatDate, toggleFavorite, goDetail, goHome,
+          detail, relatedNews, isFavorited, loading, loggedIn, user, avatarSrc, backLabel, toast,
+          formatDate, toggleFavorite, goBack, goDetail,
         };
       },
     }).mount('#app');

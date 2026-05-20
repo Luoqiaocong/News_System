@@ -4,13 +4,14 @@ from fastapi.params import Body
 from starlette import status
 from fastapi_utils.cbv import cbv
 from Dependency import JWTAuth
-from Schemas.UserFavSchema import UserFavResponse
+from Route.UnifiedRoute import UnifiedRoute
+from Schemas.UserFavSchema import FavoriteNewsItem, UserFavResponse
 from Schemas.UserSchema import UserInfo
 from Service import UserFavService
 from Utils.LogUtil import log
 from Utils.ResponseUtil import success_response
 
-router = APIRouter(prefix="/api/user/news/fav", tags=["用户收藏"])
+router = APIRouter(prefix="/api/user/news/fav", tags=["用户收藏"],route_class=UnifiedRoute)
 
 @cbv(router)
 class UserFavRouter():
@@ -30,9 +31,8 @@ class UserFavRouter():
         self,
         news_ids: Annotated[list[int], Body(embed=True, min_length=1, description="新闻ID列表")],
     ):
-        log.info(f"用户 '{self.current_user.email}' 取消收藏 '{news_ids}'")
         count = await self.service.remove_favorites(news_ids, self.current_user.id)
-        return success_response(message=f"取消收藏成功，共取消{count}条记录")
+        return {"deleted_count": count}
 
     @router.get("/check/{news_id}", summary="检查新闻是否收藏", status_code=status.HTTP_200_OK)
     async def check(
@@ -40,7 +40,7 @@ class UserFavRouter():
         news_id: Annotated[int, Path(ge=1)],
     ):
         is_fav = await self.service.check_favorite(news_id, self.current_user.id)
-        return success_response(data={"is_fav": is_fav})
+        return {"is_fav": is_fav}
 
     @router.get("/", summary="获取当前用户所有收藏", status_code=status.HTTP_200_OK)
     async def get(
@@ -48,17 +48,10 @@ class UserFavRouter():
         page: Annotated[int, Query(ge=1, description="页码")] = 1,
         page_size: Annotated[int, Query(ge=1, le=50, description="返回数据个数", alias="pagesize")] = 10,
     ):
-        rows, total = await self.service.get_favorites(self.current_user.id, page, page_size)
-        fav_lt = [{
-            **news.__dict__,
-            "favorited_at": favorited_at,
-            "favorite_id": favorite_id
-        } for news, favorited_at, favorite_id in rows]
-        data = UserFavResponse(fav_lt=fav_lt, total=total)
-        return success_response(message="获取新闻收藏列表成功", data=data)
+        data= await self.service.get_favorites(self.current_user.id, page, page_size)
+       
+        return data
 
     @router.delete("/", status_code=status.HTTP_200_OK, summary="清空当前用户所有收藏")
     async def clear(self):
-        log.info(f"用户 '{self.current_user.email}' 清空收藏")
-        res = await self.service.clear_favorites(self.current_user.id)
-        return success_response(message=f"删除了{res}条记录")
+        await self.service.clear_favorites(self.current_user.id)

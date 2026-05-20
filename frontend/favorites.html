@@ -22,64 +22,82 @@
             <span class="wave">⭐</span>
             {{ user.nickname || user.email?.split('@')[0] }}
           </span>
+          <img
+            v-if="loggedIn"
+            :src="avatarSrc"
+            class="header-avatar"
+            title="个人中心"
+          />
           <button class="btn btn-ghost btn-sm" @click="goHome">← 返回首页</button>
         </div>
       </div>
     </header>
 
     <main class="container">
-      <div class="flex-between mb-12" style="margin-bottom:24px">
-        <h2 style="font-size:22px;font-weight:700;display:flex;align-items:center;gap:10px">
-          <span style="display:inline-block;width:5px;height:24px;background:var(--primary-gradient);border-radius:3px"></span>
-          我的收藏
-          <span style="font-size:14px;font-weight:400;color:var(--gray-400)">共 {{ total }} 条</span>
-        </h2>
-        <div class="flex gap-8">
-          <button class="btn btn-outline btn-sm" @click="goHistory">浏览历史</button>
+      <div class="fav-hero">
+        <div class="fav-hero-left">
+          <h2 class="fav-title">
+            <span class="fav-title-bar"></span>
+            我的收藏
+          </h2>
+          <span class="fav-count">{{ total }} 条收藏</span>
+        </div>
+        <div class="fav-hero-actions">
+          <button class="btn btn-outline btn-sm" :class="{ active: selectMode }" @click="toggleSelectMode" v-if="list.length > 0">
+            {{ selectMode ? '退出选择' : '批量管理' }}
+          </button>
           <button class="btn btn-danger btn-sm" @click="clearAll" v-if="list.length > 0">清空全部</button>
         </div>
       </div>
 
       <div class="loading" v-if="loading"><span class="spinner"></span> 加载中...</div>
 
-      <div class="empty" v-else-if="list.length === 0">
-        <div class="empty-icon">⭐</div>
-        <div class="empty-text">还没有收藏任何新闻</div>
-        <button class="btn btn-primary mt-16" @click="goHome">去逛逛</button>
+      <div class="empty-state" v-else-if="list.length === 0">
+        <div class="empty-illustration">
+          <div class="empty-circle">
+            <span class="empty-emoji">⭐</span>
+          </div>
+        </div>
+        <h3 class="empty-heading">还没有收藏任何新闻</h3>
+        <p class="empty-desc">浏览新闻时点击 ❤️ 即可收藏</p>
+        <button class="btn btn-primary btn-lg" @click="goHome">去逛逛</button>
       </div>
 
       <template v-else>
-        <div class="table-toolbar flex-between" style="margin-bottom:12px">
-          <label class="flex gap-8" style="align-items:center;font-size:13px;color:var(--gray-500)">
+
+        <div class="select-toolbar" v-if="selectMode">
+          <label class="select-all-label">
             <input type="checkbox" :checked="allSelected" @change="toggleAll" />
-            全选
+            全选 ({{ selectedIds.length }}/{{ list.length }})
           </label>
           <button class="btn btn-danger btn-sm" @click="batchRemove" :disabled="selectedIds.length === 0">
-            删除选中 ({{ selectedIds.length }})
+            取消收藏选中 ({{ selectedIds.length }})
           </button>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width:40px"></th>
-              <th>新闻标题</th>
-              <th>作者</th>
-              <th>阅读量</th>
-              <th>收藏时间</th>
-              <th style="width:80px">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in list" :key="item.favoriteId">
-              <td><input type="checkbox" :value="item.favoriteId" v-model="selectedIds" /></td>
-              <td><span class="news-title-cell" @click="goDetail(item.id)">{{ item.title }}</span></td>
-              <td>{{ item.author }}</td>
-              <td>{{ item.views }}</td>
-              <td>{{ formatDate(item.favoriteTime) }}</td>
-              <td><button class="btn btn-danger btn-sm" style="border-radius:10px" @click="removeOne(item.favoriteId)">取消</button></td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div class="news-grid">
+          <div class="news-card fav-news-card" v-for="item in list" :key="item.favoriteId || item.favorite_id || item.id">
+            <div class="fav-card-check" v-if="selectMode" @click.stop>
+              <input type="checkbox" :value="item.id" v-model="selectedIds" class="fav-checkbox" />
+            </div>
+            <div class="fav-card-remove" v-else @click.stop="removeOne(item.id)" title="取消收藏">
+              <span>❤️</span>
+            </div>
+            <img v-if="item.thumbnail" :src="item.thumbnail" :alt="item.title" class="news-card-thumb" @click="goDetail(item.id)" />
+            <div v-else class="news-card-thumb-placeholder" @click="goDetail(item.id)">📰</div>
+            <div class="news-card-body" @click="goDetail(item.id)">
+              <h3 class="news-card-title">{{ item.title }}</h3>
+              <p class="news-card-summary">{{ item.summary || '暂无摘要' }}</p>
+              <div class="news-card-meta">
+                <span class="author">{{ item.author }}</span>
+                <span>{{ item.views }} 阅读</span>
+              </div>
+              <div class="fav-time">
+                📌 {{ formatDate(item.favoriteTime || item.favorited_at) }}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="pagination" v-if="totalPages > 1">
           <button class="page-btn" :disabled="page <= 1" @click="goPage(page - 1)">‹</button>
@@ -93,7 +111,7 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted, watch } = Vue;
+    const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
@@ -102,15 +120,24 @@
         const list = ref([]);
         const total = ref(0);
         const page = ref(1);
-        const pageSize = ref(15);
+        const pageSize = ref(6);
         const loading = ref(true);
+        const selectMode = ref(false);
         const selectedIds = ref([]);
         const toast = ref({ show: false, message: '', type: 'success' });
+
+        const avatarSrc = computed(() => {
+          if (user.value && user.value.avatar) return avatarUrl(user.value.avatar);
+          return 'https://via.placeholder.com/38';
+        });
 
         const totalPages = computed(() => Math.ceil(total.value / pageSize.value) || 0);
         const allSelected = computed({
           get: () => list.value.length > 0 && selectedIds.value.length === list.value.length,
-          set: v => { if (v) selectedIds.value = list.value.map(o => o.favoriteId); else selectedIds.value = []; }
+          set: v => {
+            if (v) selectedIds.value = list.value.map(o => o.id);
+            else selectedIds.value = [];
+          }
         });
 
         const pageNumbers = computed(() => {
@@ -126,7 +153,9 @@
 
         function formatDate(s) {
           if (!s) return '';
-          const d = new Date(s), pad = n => String(n).padStart(2, '0');
+          const d = new Date(s);
+          if (isNaN(d.getTime())) return '';
+          const pad = n => String(n).padStart(2, '0');
           return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         }
 
@@ -135,51 +164,68 @@
           selectedIds.value = [];
           try {
             const data = await FavAPI.getAll(page.value, pageSize.value);
-            list.value = data && data.newsList ? data.newsList : (Array.isArray(data) ? data : []);
-            total.value = data && data.total ? data.total : list.value.length;
+            const items = data && data.newsList ? data.newsList
+              : data && data.fav_lt ? data.fav_lt
+              : Array.isArray(data) ? data : [];
+            list.value = items;
+            total.value = data && data.total != null ? data.total : items.length;
           } catch (e) { showToast(e.message, 'error'); }
           finally { loading.value = false; }
         }
 
-        function goPage(p) { page.value = p; fetchList(); }
-        function toggleAll() {}
+        function goPage(p) { page.value = p; fetchList(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function toggleAll() {
+          if (allSelected.value) selectedIds.value = [];
+          else selectedIds.value = list.value.map(o => o.id);
+        }
+        function toggleSelectMode() { selectMode.value = !selectMode.value; selectedIds.value = []; }
 
         async function removeOne(id) {
-          try { await FavAPI.remove([id]); showToast('已取消收藏'); fetchList(); }
-          catch (e) { showToast(e.message, 'error'); }
+          try {
+            await FavAPI.remove([id]);
+            list.value = list.value.filter(item => item.id !== id);
+            total.value--;
+            showToast('已取消收藏');
+          } catch (e) { showToast(e.message, 'error'); }
         }
 
         async function batchRemove() {
           if (!selectedIds.value.length) return;
-          if (!confirm('确定删除选中的 ' + selectedIds.value.length + ' 条收藏？')) return;
-          try { await FavAPI.remove(selectedIds.value); showToast('已删除'); fetchList(); }
-          catch (e) { showToast(e.message, 'error'); }
+          try {
+            await FavAPI.remove(selectedIds.value);
+            showToast('已取消收藏');
+            fetchList();
+            selectMode.value = false;
+          } catch (e) { showToast(e.message, 'error'); }
         }
 
         async function clearAll() {
-          if (!confirm('确定清空所有收藏？此操作不可恢复。')) return;
-          try { await FavAPI.clearAll(); list.value = []; total.value = 0; showToast('已清空'); }
-          catch (e) { showToast(e.message, 'error'); }
+          if (!confirm('确定清空所有收藏？')) return;
+          try {
+            await FavAPI.clearAll();
+            list.value = [];
+            total.value = 0;
+            showToast('已清空');
+          } catch (e) { showToast(e.message, 'error'); }
         }
 
-        function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
+        function goDetail(id) { window.location.href = 'detail.html?id=' + id + '&from=favorites'; }
         function goHome() { window.location.href = 'index.html'; }
-        function goHistory() { window.location.href = 'history.html'; }
 
         onMounted(async () => {
           if (window.isLoggedIn()) {
             loggedIn.value = true;
             try { user.value = await UserAPI.getInfo(); } catch (e) { setToken(null); loggedIn.value = false; }
           }
-          if (!window.isLoggedIn()) { window.location.href = 'login.html'; return; }
+          if (!window.isLoggedIn()) { window.location.href = 'index.html'; return; }
           await fetchList();
         });
 
         return {
-          loggedIn, user, list, total, page, loading, selectedIds, toast,
+          loggedIn, user, avatarSrc, list, total, page, loading, selectMode, selectedIds, toast,
           totalPages, allSelected, pageNumbers,
-          showToast, formatDate, fetchList, goPage, toggleAll,
-          removeOne, batchRemove, clearAll, goDetail, goHome, goHistory,
+          showToast, formatDate, fetchList, goPage, toggleAll, toggleSelectMode,
+          removeOne, batchRemove, clearAll, goDetail, goHome,
         };
       },
     }).mount('#app');

@@ -30,7 +30,7 @@ class UserFavRepo:
             UserFavorite.user_id == user_id
         )
         res = await self.db.execute(query)
-        return res.rowcount
+        return res.rowcount # type: ignore
 
     async def check(self, news_id: int, user_id: int) -> bool:
         query = select(UserFavorite).filter_by(user_id=user_id, news_id=news_id).limit(1)
@@ -50,8 +50,14 @@ class UserFavRepo:
         )
         rows = (await self.db.execute(query)).all()
         return rows, total
+    
+
+    async def get_all(self,user_id:int):
+        query = select(UserFavorite.news_id).where(UserFavorite.user_id == user_id)
+        res = await self.db.execute(query)
+        return set(row[0] for row in res.fetchall())
 
     async def delete_all(self, user_id: int):
         query = delete(UserFavorite).where(UserFavorite.user_id == user_id)
         res = await self.db.execute(query)
-        return res.rowcount
+        return res.rowcount # type: ignore

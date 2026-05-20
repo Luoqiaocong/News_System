@@ -67,6 +67,7 @@ class NewsCacheRepo:
         因为需要排除当前新闻，所以多取几个 fetch_count，再截取 6 条。
         返回 list[dict]（从 news:detail 反序列化），或 None 表示缓存未命中。
         """
+        await redis_client.srem(f"news:related:{category_id}", "-1")  # 清除占位符（如果有） -- 破防
         set_key = f"news:related:{category_id}"
         raw_ids = await redis_client.srandmember(set_key, fetch_count)  # 从 Set 中随机取一些新闻 ID（str），可能包含 exclude_id
 
@@ -100,4 +101,4 @@ class NewsCacheRepo:
         else:
             # 2. 数据库里是个空分类！为了防止穿透，塞入一个特殊的标记 "-1"
             await redis_client.sadd(set_key, "-1")
-            await redis_client.expire(set_key, 300) # 空缓存的过期时间设短一点（如 5 分钟）
+            await redis_client.expire(set_key, 900) # 空缓存的过期时间设短一点（如 15 分钟）

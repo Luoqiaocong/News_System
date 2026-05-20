@@ -82,7 +82,7 @@ class NewsService:
 
         # ====== 2. 相关新闻（先 Redis Set SRANDMEMBER，后 DB ORDER BY RAND()）======
         related = await NewsCacheRepo.get_related_news_cache(category_id, news_id)
-        if related is None:
+        if not related :
             # 缓存未命中，走 DB
             related = await self.repo.get_related_news(news_id, category_id)
             # 用刚取到的新闻 ID 增量预热 Set，不额外查全表

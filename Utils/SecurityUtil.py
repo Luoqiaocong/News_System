@@ -11,11 +11,9 @@ def verify_password(cur_pwd: str, user):
 def validate_password_strength(password: str):
     if len(password) < 8:
         raise UserException(code=ResponseCode.USER_PWD_WEAK)
-    if not re.search(r'[0-9]', password):
-        raise UserException(code=ResponseCode.USER_PWD_WEAK)
     if not re.search(r'[a-z]', password):
         raise UserException(code=ResponseCode.USER_PWD_WEAK)
     if not re.search(r'[A-Z]', password):
         raise UserException(code=ResponseCode.USER_PWD_WEAK)
-    if not re.search(r'[!@#$%^&*()_+\-=\[\]{};:\'\"\\|,.<>/?]', password):
+    if not re.search(r'[0-9]', password):
         raise UserException(code=ResponseCode.USER_PWD_WEAK)
