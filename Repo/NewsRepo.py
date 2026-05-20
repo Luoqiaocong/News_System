@@ -113,3 +113,14 @@ class NewsRepo:
         result = await self.db.execute(stmt)
 
         return  result.scalars().all()
+
+    @staticmethod
+    async def check_news_exists(news_id:int,db:AsyncSession):
+        """
+        检查新闻是否存在。
+        :param news_id: 新闻ID
+        :return: 布尔值，表示新闻是否存在
+        """
+        stmt = select(func.count()).where(News.id == news_id)
+        result = (await db.execute(stmt)).scalar_one_or_none()
+        return result is not None

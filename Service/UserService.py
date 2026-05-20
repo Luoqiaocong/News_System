@@ -7,7 +7,7 @@ from pydantic import HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from Config.DataBaseConfig import get_db
-from Exception import UserException, ResponseCode
+from Exception import UserException, ResponseCode, BaseBusinessException
 from Repo import UserRepo
 from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserInfo, UserProfileUpdate, \
     UserPwdAuth, UserPwdResetAuth
@@ -56,7 +56,7 @@ class UserService:
         except Exception as e:
             log.error(f"未捕获的系统异常: {e}")
             await self.db.rollback()
-            raise UserException(code=ResponseCode.DATABASE_ERROR)
+            raise BaseBusinessException(code=ResponseCode.DATABASE_ERROR)
 
     async def _get_user_by_email(self, email: str) -> User:
         user = await self.repo.get_user_dynamic(email=email)
