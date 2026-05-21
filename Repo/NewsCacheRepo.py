@@ -30,9 +30,9 @@ class NewsCacheRepo:
         return await redis_client.get(key)
 
     @staticmethod
-    async def set_detail_cache(news_id: int, data: dict, expire: int = 3600):
+    async def set_detail_cache(news_id: int, data: dict):
         key = f"news:detail:{news_id}"
-        await redis_client.set(key, data, expire=expire)
+        await redis_client.set(key, data)
 
     @staticmethod
     async def delete_detail_cache(news_id: int):

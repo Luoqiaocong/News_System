@@ -52,16 +52,24 @@ class NewsService:
 
     @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_list(self,category_id: int|None, page: int, page_size: int)->NewsListResponse:
-        # 计算分页索引
         start = (page - 1) * page_size
         end = start + page_size - 1
     
         news_detail_lt,total = await NewsCacheRepo.get_news_list_cache(category_id,start,end)
-        if not news_detail_lt or not total:
-            raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
-        return NewsListResponse(
-            news_list=[NewsListCard.model_validate(json.loads(detail)) for detail in news_detail_lt if detail],
-            total=total)
+        if news_detail_lt and total:
+            valid = [d for d in news_detail_lt if d]
+            if valid:
+                return NewsListResponse(
+                    news_list=[NewsListCard.model_validate(json.loads(d)) for d in valid],
+                    total=total)
+
+        news_orm_list, total = await self.repo.get_news(self.db, category_id, start, page_size)
+        if news_orm_list:
+            return NewsListResponse(
+                news_list=[NewsListCard.model_validate(n) for n in news_orm_list],
+                total=total)
+
+        raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
 
     @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_detail(self, news_id:int):
@@ -76,7 +84,7 @@ class NewsService:
             if not detail_orm:
                 raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)  
             category_id = detail_orm.category_id  # 从 DB 获取 category_id
-            detail_dict = NewsData.model_validate(detail_orm).model_dump()  # 转 dict 写回缓存，避免重复序列化
+            detail_dict = NewsData.model_validate(detail_orm).model_dump(mode="json")  # mode='json' 把 datetime 转成字符串
             # 写回缓存
             await NewsCacheRepo.set_detail_cache(news_id, detail_dict)
 

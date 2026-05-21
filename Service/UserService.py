@@ -88,7 +88,7 @@ class UserService:
         SecurityUtil.validate_password_strength(userdata.password)
 
         # 验证码校验
-        # await self._verify_code(userdata.email, userdata.code)
+        await self._verify_code(userdata.email, userdata.code)
 
         await self.repo.create(userdata)
 

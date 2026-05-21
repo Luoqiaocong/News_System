@@ -28,32 +28,22 @@ class NewsRepo:
             return [category] if category else []
         return (await self.db.execute(select(Category))).scalars().all()
 
-    async def get_news(self,db: AsyncSession, category_id: int, skip: int = 0, limit: int = 10):
-        """
-        获取指定分类下的新闻列表及总数。
+    async def get_news(self,db: AsyncSession, category_id: int | None, skip: int = 0, limit: int = 10):
+        if category_id is not None:
+            count_query = select(func.count(News.id)).where(News.category_id == category_id)
+        else:
+            count_query = select(func.count(News.id))
 
-        :param db: 数据库会话
-        :param category_id: 分类ID
-        :param skip: 跳过的记录数（用于分页）
-        :param limit: 返回的记录数（用于分页）
-        :return: 包含新闻列表和总数的元组 (news_list, total_count)
-        """
-        # 先查询新闻总数，如无数据则减少一次查询，直接返回空列表和0
-        count_query = select(func.count(News.id)).where(News.category_id == category_id)
         count_result = (await db.execute(count_query)).scalar_one()
-
         if count_result == 0:
             return [], 0
 
-        # 构建分页查询语句
-        news_query = (
-            select(News)
-            .where(News.category_id == category_id)
-            .offset(skip)
-            .limit(limit)
-        )
-        news_result = (await db.execute(news_query)).scalars().all()
+        if category_id is not None:
+            news_query = select(News).where(News.category_id == category_id)
+        else:
+            news_query = select(News)
 
+        news_result = (await db.execute(news_query.offset(skip).limit(limit))).scalars().all()
         return news_result, count_result
 
     async def get_news_detail(self,news_id: int):
