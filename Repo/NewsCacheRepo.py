@@ -32,7 +32,7 @@ class NewsCacheRepo:
     @staticmethod
     async def set_detail_cache(news_id: int, data: dict):
         key = f"news:detail:{news_id}"
-        await redis_client.set(key, data)
+        await redis_client.set(key, data, expire=3600)
 
     @staticmethod
     async def delete_detail_cache(news_id: int):
@@ -84,20 +84,14 @@ class NewsCacheRepo:
                     result.append(json.loads(d) if isinstance(d, str) else d)
                 except (json.JSONDecodeError, TypeError):
                     pass
-        return result if result else None
+        return result if len(result) >= 3 else None
 
     @staticmethod
-    async def warm_related_news(category_id: int, news_ids: list[int], expire: int = 86400):
-        """
-        将某分类下的所有新闻 ID 写入 Redis Set，供 SRANDMEMBER 随机取。
-        """
+    async def warm_related_news(category_id: int, news_ids: list[int], expire: int = 3600):
         set_key = f"news:related:{category_id}"
-
         if news_ids:
-            # 1. 正常有数据，塞入真正的新闻 ID
-            str_ids = [str(nid) for nid in news_ids]
-            await redis_client.sadd(set_key, *str_ids)
-            await redis_client.expire(set_key, expire) # 正常过期时间（如 1 小时）
+            await redis_client.sadd(set_key, *[str(nid) for nid in news_ids])
+            await redis_client.expire(set_key, expire)  # 刷新过期时间
         else:
             # 2. 数据库里是个空分类！为了防止穿透，塞入一个特殊的标记 "-1"
             await redis_client.sadd(set_key, "-1")

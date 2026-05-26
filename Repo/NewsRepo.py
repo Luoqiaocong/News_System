@@ -128,12 +128,12 @@ class NewsRepo:
             filters.append(News.publish_time >= datetime.strptime(start_date, "%Y-%m-%d")) # type: ignore
         if end_date:
             filters.append(News.publish_time <= datetime.strptime(end_date, "%Y-%m-%d")) # type: ignore
-        base = select(News).where(and_(*filters))
+        base = select(News).where(and_(*filters)) # 将 filters 列表中的所有条件用 AND 连接成 WHERE 子句
         total = (await self.db.execute(select(func.count()).select_from(base))).scalar_one() # type: ignore
         if total == 0:
             return [], 0
         rows = (await self.db.execute(base.order_by(News.publish_time.desc())
-                .offset(offset).limit(limit))).scalars().all()
-        return rows, total
+                .offset(offset).limit(limit))).scalars().all()  # offset(offset) → 跳过前 offset 条（用于分页）  limit(limit) → 只取 limit 条
+        return rows, total 
 
         

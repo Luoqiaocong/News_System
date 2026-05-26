@@ -58,7 +58,8 @@ class NewsService:
         news_detail_lt,total = await NewsCacheRepo.get_news_list_cache(category_id,start,end)
         if news_detail_lt and total:
             valid = [d for d in news_detail_lt if d]
-            if valid:
+            expected = min(page_size, total - start)
+            if len(valid) >= expected:
                 return NewsListResponse(
                     news_list=[NewsListCard.model_validate(json.loads(d)) for d in valid],
                     total=total)

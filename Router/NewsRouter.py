@@ -14,7 +14,7 @@ from Schemas.UserSchema import UserInfo
 from Service import NewsService
 from Utils.ResponseUtil import success_response
 
-router = APIRouter(prefix="/api/news", tags=["新闻相关"],route_class=UnifiedRoute)
+router = APIRouter(prefix="/api/news", tags=["新闻模块"],route_class=UnifiedRoute)
 
 @cbv(router)
 class NewsRouterAPI:

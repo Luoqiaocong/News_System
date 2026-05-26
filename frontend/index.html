@@ -44,7 +44,7 @@
 
     <!-- ========== Main Content ========== -->
     <main class="container">
-      <div class="category-tabs" v-if="!searchMode">
+      <div class="category-tabs">
         <button class="category-tab" :class="{ active: currentCategoryId === 0 }" @click="selectCategory(0)">全部</button>
         <button v-for="cat in categories" :key="cat.id" class="category-tab" :class="{ active: currentCategoryId === cat.id }" @click="selectCategory(cat.id)">{{ cat.name }}</button>
       </div>
@@ -56,26 +56,15 @@
           <span class="search-bar-sep">至</span>
           <input v-model="searchEndDate" type="date" class="search-bar-date" />
           <button class="search-bar-btn" @click="doSearch">搜索</button>
-          <button class="search-bar-clear" @click="clearSearch">清空</button>
+          <button class="search-bar-clear" @click="resetSearch">清空</button>
         </div>
       </div>
 
-      <div v-if="searchMode && searchQuery" class="search-hint" style="margin-bottom:16px;font-size:13px;color:var(--gray-500)">
-        {{ searchQuery }} — {{ total }} 条结果
-        <span style="cursor:pointer;color:var(--primary);margin-left:8px" @click="clearSearch">清除</span>
-      </div>
+      <div class="loading" v-if="loading"><span class="spinner"></span> 正在加载...</div>
 
-      <div class="loading" v-if="loading"><span class="spinner"></span> {{ searchMode ? '搜索中...' : '正在加载...' }}</div>
-
-      <div class="empty" v-else-if="newsList.length === 0 && !searchMode">
+      <div class="empty" v-else-if="newsList.length === 0">
         <div class="empty-icon">📭</div>
         <div class="empty-text">暂无新闻数据</div>
-      </div>
-
-      <div class="empty-state" v-else-if="searchMode && searchSearched && newsList.length === 0">
-        <div class="empty-circle"><span class="empty-emoji">🔍</span></div>
-        <h3 class="empty-heading">未找到相关新闻</h3>
-        <p class="empty-desc">试试其他关键词或调整日期范围</p>
       </div>
 
       <div class="news-grid" v-else-if="newsList.length > 0">
@@ -374,8 +363,6 @@
         const currentCategoryId = ref(0);
         const loading = ref(false);
         const showSearch = ref(false);
-        const searchMode = ref(false);
-        const searchSearched = ref(false);
         const searchQuery = ref('');
         const searchStartDate = ref('');
         const searchEndDate = ref('');
@@ -507,12 +494,7 @@
         async function fetchNews() {
           loading.value = true;
           try {
-            let data;
-            if (searchMode.value) {
-              data = await NewsAPI.search(searchQuery.value, currentPage.value, searchStartDate.value || undefined, searchEndDate.value || undefined);
-            } else {
-              data = await NewsAPI.getList(currentCategoryId.value, currentPage.value, pageSize.value);
-            }
+            const data = await NewsAPI.getList(currentCategoryId.value, currentPage.value, pageSize.value);
             if (data && data.NewsList) { newsList.value = data.NewsList; total.value = data.total || 0; }
             else if (data && data.newsList) { newsList.value = data.newsList; total.value = data.total || 0; }
             else if (data && data.news_list) { newsList.value = data.news_list; total.value = data.total || 0; }
@@ -521,31 +503,30 @@
           } catch (e) { showToast(e.message, 'error'); newsList.value = []; }
           finally { loading.value = false; }
         }
-        function selectCategory(catId) { currentCategoryId.value = catId; currentPage.value = 1; searchMode.value = false; fetchNews(); }
+        function selectCategory(catId) { currentCategoryId.value = catId; currentPage.value = 1; fetchNews(); }
         function goPage(p) { if (p === '...') return; currentPage.value = p; fetchNews(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        function goHome() { currentCategoryId.value = 0; currentPage.value = 1; searchMode.value = false; fetchNews(); }
+        function goHome() { currentCategoryId.value = 0; currentPage.value = 1; fetchNews(); }
         function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
         function goFavorites() { window.location.href = 'favorites.html'; }
         function goHistory() { window.location.href = 'history.html'; }
 
-        // --- Search ---
-        async function doSearch() {
-          if (!searchQuery.value.trim() && !searchStartDate.value && !searchEndDate.value) {
+        function doSearch() {
+          const q = searchQuery.value.trim();
+          if (!q && !searchStartDate.value && !searchEndDate.value) {
             showToast('请输入关键词或选择日期范围', 'error'); return;
           }
-          searchMode.value = true;
-          searchSearched.value = true;
-          currentPage.value = 1;
-          await fetchNews();
+          const params = new URLSearchParams();
+          if (q) params.set('q', q);
+          if (searchStartDate.value) params.set('startDate', searchStartDate.value);
+          if (searchEndDate.value) params.set('endDate', searchEndDate.value);
+          if (currentCategoryId.value) params.set('categoryId', currentCategoryId.value);
+          window.location.href = 'search.html?' + params.toString();
         }
-        function clearSearch() {
-          searchMode.value = false;
-          searchSearched.value = false;
+        function resetSearch() {
           searchQuery.value = '';
           searchStartDate.value = '';
           searchEndDate.value = '';
-          currentPage.value = 1;
-          fetchNews();
+          showSearch.value = false;
         }
 
         // --- Auth ---
@@ -719,7 +700,7 @@
 
         return {
           categories, newsList, total, currentPage, currentCategoryId, loading, showSearch,
-          searchMode, searchSearched, searchQuery, searchStartDate, searchEndDate,
+          searchQuery, searchStartDate, searchEndDate,
           loggedIn, user,
           showAuthModal, authMode, showResetModal, authLoading, codeCountdown,
           loginForm, loginPwdVisible,
@@ -733,7 +714,7 @@
           calcRegPwdStrength, calcResetPwdStrength, calcProfilePwdStrength,
           showToast, formatDate,
           selectCategory, goPage, goHome, goDetail, goFavorites, goHistory,
-          showAuth, closeAuthModal, closeResetModal, resetToLogin, doSearch, clearSearch,
+          showAuth, closeAuthModal, closeResetModal, resetToLogin, doSearch, resetSearch,
           handleLogin, handleRegister, handleResetPwd, sendRegCode, sendResetCode, doLogout,
           openProfile, closeProfileModal, onAvatarFileChange, handleUpdateProfile,
           switchToPwdTab, handleUpdatePwd, handleDeleteAccount,

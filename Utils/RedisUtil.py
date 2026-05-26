@@ -44,17 +44,13 @@ class RedisManager:
 
     # ========== 高频便捷方法（带自动序列化）==========
 
-    async def set(self, key: str, value: Any, expire: int = 3600):
-        """
-        设置缓存（自动处理 JSON 序列化）
-
-        :param key: 缓存键
-        :param value: 值（支持 dict/list/str/int，自动序列化）
-        :param expire: 过期时间（秒），默认1小时
-        """
+    async def set(self, key: str, value: Any, expire: int = None):
         if isinstance(value, (dict, list)):
             value = json.dumps(value, ensure_ascii=False)
-        await self._redis.set(key, value, ex=expire)
+        if expire:
+            await self._redis.set(key, value, ex=expire)
+        else:
+            await self._redis.set(key, value)
 
     async def get(self, key: str) -> Any:
         """

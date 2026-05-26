@@ -78,9 +78,10 @@ const NewsAPI = {
   getDetail(newsId) {
     return request('/api/news/detail/' + newsId);
   },
-  search(keyword, page, startDate, endDate) {
+  search(keyword, page, startDate, endDate, categoryId) {
     page = page || 1;
-    let url = '/api/news/search?q=' + encodeURIComponent(keyword) + '&page=' + page;
+    let url = '/api/news/search?q=' + encodeURIComponent(keyword || '') + '&page=' + page;
+    if (categoryId) url += '&categoryId=' + categoryId;
     if (startDate) url += '&startDate=' + startDate;
     if (endDate) url += '&endDate=' + endDate;
     return request(url);
