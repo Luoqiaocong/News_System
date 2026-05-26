@@ -11,8 +11,8 @@ class NewsCacheRepo:
 
     # ========== 列表缓存（ZSet） ==========
     @staticmethod
-    async def get_news_list_cache(category_id: int|None, start: int, end: int):
-        zset_key = f"news:list:{category_id}" if category_id is not None else "news:list:all"
+    async def get_news_list_cache(category_id: int, start: int, end: int):
+        zset_key = f"news:list:{category_id}" if category_id else "news:list:all"
         total = await redis_client.zcard(zset_key) # 获取总数
         if not total:
             return None, 0

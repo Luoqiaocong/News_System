@@ -72,11 +72,18 @@ const NewsAPI = {
     page = page || 1;
     pageSize = pageSize || 12;
     const params = new URLSearchParams({ page: String(page), pagesize: String(pageSize) });
-    if (categoryId) params.set('categoryId', String(categoryId));
+    params.set('categoryId', String(categoryId || 0));
     return request('/api/news/list?' + params.toString());
   },
   getDetail(newsId) {
     return request('/api/news/detail/' + newsId);
+  },
+  search(keyword, page, startDate, endDate) {
+    page = page || 1;
+    let url = '/api/news/search?q=' + encodeURIComponent(keyword) + '&page=' + page;
+    if (startDate) url += '&startDate=' + startDate;
+    if (endDate) url += '&endDate=' + endDate;
+    return request(url);
   },
 };
 

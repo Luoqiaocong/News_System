@@ -51,7 +51,7 @@ class NewsService:
         return [CategoryData.model_validate(cat) for cat in categories_orm]
 
     @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
-    async def get_news_list(self,category_id: int|None, page: int, page_size: int)->NewsListResponse:
+    async def get_news_list(self,category_id: int, page: int, page_size: int)->NewsListResponse:
         start = (page - 1) * page_size
         end = start + page_size - 1
     
@@ -131,5 +131,14 @@ class NewsService:
                 if not is_add:
                     await self.histrepo.add_hist(news_id, user.id)  # 新增调用 add_hist方法，确保记录存在
 
+    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
+    async def search_news(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str], page: int, pagesize: int):
+        
+        offset = (page - 1) * pagesize
 
-
+        rows, total = await self.repo.search(query, category_id, start_date, end_date, offset, pagesize)
+        if not rows:
+            raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
+        return NewsListResponse(
+            news_list=[NewsListCard.model_validate(n) for n in rows],
+            total=total)

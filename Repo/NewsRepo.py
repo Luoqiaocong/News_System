@@ -1,7 +1,8 @@
+from typing import Optional
+from datetime import datetime
 from fastapi import Depends
-from oss2.defaults import request_retries
 from pydantic import BaseModel
-from sqlalchemy import select, func, update
+from sqlalchemy import and_, select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -28,8 +29,8 @@ class NewsRepo:
             return [category] if category else []
         return (await self.db.execute(select(Category))).scalars().all()
 
-    async def get_news(self,db: AsyncSession, category_id: int | None, skip: int = 0, limit: int = 10):
-        if category_id is not None:
+    async def get_news(self,db: AsyncSession, category_id: int, skip: int = 0, limit: int = 10):
+        if category_id:
             count_query = select(func.count(News.id)).where(News.category_id == category_id)
         else:
             count_query = select(func.count(News.id))
@@ -38,7 +39,7 @@ class NewsRepo:
         if count_result == 0:
             return [], 0
 
-        if category_id is not None:
+        if category_id:
             news_query = select(News).where(News.category_id == category_id)
         else:
             news_query = select(News)
@@ -114,3 +115,25 @@ class NewsRepo:
         stmt = select(func.count()).where(News.id == news_id)
         result = (await db.execute(stmt)).scalar_one_or_none()
         return result is not None
+    
+    async def search(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str],  offset: int, limit: int):
+        filters = []
+        if query:
+            filters.append(News.title.like(f'%{query}%'))
+
+        if category_id:
+            filters.append(News.category_id == category_id) # type: ignore
+
+        if start_date:
+            filters.append(News.publish_time >= datetime.strptime(start_date, "%Y-%m-%d")) # type: ignore
+        if end_date:
+            filters.append(News.publish_time <= datetime.strptime(end_date, "%Y-%m-%d")) # type: ignore
+        base = select(News).where(and_(*filters))
+        total = (await self.db.execute(select(func.count()).select_from(base))).scalar_one() # type: ignore
+        if total == 0:
+            return [], 0
+        rows = (await self.db.execute(base.order_by(News.publish_time.desc())
+                .offset(offset).limit(limit))).scalars().all()
+        return rows, total
+
+        
