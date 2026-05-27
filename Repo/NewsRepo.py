@@ -25,13 +25,13 @@ class NewsRepo:
             return [category] if category else []
         return (await self.db.execute(select(Category))).scalars().all()
 
-    async def get_news(self,db: AsyncSession, category_id: int, skip: int = 0, limit: int = 10):
+    async def get_news(self, category_id: int, skip: int = 0, limit: int = 10):
         if category_id:
             count_query = select(func.count(News.id)).where(News.category_id == category_id)
         else:
             count_query = select(func.count(News.id))
 
-        count_result = (await db.execute(count_query)).scalar_one()
+        count_result = (await self.db.execute(count_query)).scalar_one()
         if count_result == 0:
             return [], 0
 
@@ -40,7 +40,7 @@ class NewsRepo:
         else:
             news_query = select(News)
 
-        news_result = (await db.execute(news_query.offset(skip).limit(limit))).scalars().all()
+        news_result = (await self.db.execute(news_query.offset(skip).limit(limit))).scalars().all()
         return news_result, count_result
 
     async def get_news_detail(self,news_id: int):

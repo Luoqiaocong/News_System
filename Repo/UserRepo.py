@@ -84,32 +84,32 @@ class UserRepo:
         query = delete(User).where(User.id == user_id)
         row = await self.db.execute(query)
         await self.db.flush()
-        return row.rowcount > 0
+        return row.rowcount > 0 # type: ignore
 
     async def change_password(self, new_pwd:str, user: User):
         user.password = new_pwd
         await self.db.flush()
 
-    async def reset_password(self, user_request: UserPwdResetAuth):
-        """
-        重置用户密码
-        """
-        # 2. 执行更新
-        query = update(User).where(User.email == user_request.email).values(password=user_request.new_pwd)
-        res = await  self.db.execute(query)
+    # async def reset_password(self, user_request: UserPwdResetAuth):
+    #     """
+    #     重置用户密码
+    #     """
+    #     # 2. 执行更新
+    #     query = update(User).where(User.email == user_request.email).values(password=user_request.new_pwd)
+    #     res = await  self.db.execute(query)
 
-        # 3. 检查是否找到用户
-        if res.rowcount == 0:
-            await  self.db.rollback()
-            raise UserException(code=ResponseCode.USER_NOT_FOUND)
+    #     # 3. 检查是否找到用户
+    #     if res.rowcount == 0:
+    #         await  self.db.rollback()
+    #         raise UserException(code=ResponseCode.USER_NOT_FOUND)
 
-        # 4. 提交事务
-        try:
-            await  self.db.commit()
-        except Exception as e:
-            await  self.db.rollback()
-            log.error(f"'{user_request.email}'重置密码失败，失败原因：{e}")
-            raise UserException(code=ResponseCode.DATABASE_ERROR, msg="密码重置失败")
+    #     # 4. 提交事务
+    #     try:
+    #         await  self.db.commit()
+    #     except Exception as e:
+    #         await  self.db.rollback()
+    #         log.error(f"'{user_request.email}'重置密码失败，失败原因：{e}")
+    #         raise UserException(code=ResponseCode.DATABASE_ERROR, msg="密码重置失败")
 
 
 

@@ -4,7 +4,6 @@ from Repo.UserFavRepo import UserFavRepo
 from Repo.NewsRepo import NewsRepo
 from Repo.NewsCacheRepo import NewsCacheRepo
 from Repo.UserFavCacheRepo import UserFavCacheRepo
-from Repo.UserHistCacheRepo import UserHistCacheRepo
 
 
 
@@ -15,5 +14,4 @@ __all__ = [
     "NewsRepo",
     "NewsCacheRepo",
     "UserFavCacheRepo",
-    "UserHistCacheRepo"
 ]

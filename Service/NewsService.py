@@ -5,6 +5,7 @@ from fastapi import Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import NewsException, ResponseCode
+from Exception.BusinessException import BaseBusinessException
 from Repo import NewsRepo, NewsCacheRepo, UserHistRepo
 from Schemas.NewsSchema import CategoryData, NewsData, NewsDetailResponse, NewsListResponse, NewsListCard, RelatedNewsCard
 from Schemas.UserSchema import UserInfo
@@ -33,7 +34,7 @@ class NewsService:
         except Exception as e:
             log.error(f"未捕获的系统异常: {e}")
             await self.db.rollback()
-            raise NewsException(code=ResponseCode.DATABASE_ERROR)
+            raise BaseBusinessException(code=ResponseCode.DATABASE_ERROR)
 
     @redis_cache_decorator(
         key_prefix="news:categories:{category_id}",
@@ -60,7 +61,7 @@ class NewsService:
                     news_list=[NewsListCard.model_validate(json.loads(d)) for d in valid],
                     total=total)
 
-        news_orm_list, total = await self.repo.get_news(self.db, category_id, start, page_size)
+        news_orm_list, total = await self.repo.get_news(category_id, start, page_size)
         if news_orm_list:
             return NewsListResponse(
                 news_list=[NewsListCard.model_validate(n) for n in news_orm_list],

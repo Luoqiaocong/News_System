@@ -25,14 +25,14 @@ class UserHistRepo:
             .values(viewed_at=now)
         )
         result = await self.db.execute(stmt)
-        return result.rowcount > 0  # 如果更新了记录，返回 True
+        return result.rowcount > 0  # type: ignore # 如果更新了记录，返回 True
 
     async def add_hist(self,news_id:int,user_id:int):
         hist = UserNewsHistory(user_id=user_id, news_id=news_id, viewed_at=datetime.now())
         self.db.add(hist)
         await self.db.flush()  # 刷新以获取 hist.id
 
-    async def delete_history(self,user_id:int,news_ids:list[int]):
+    async def delete(self,user_id:int,news_ids:list[int]):
         '''
 
         :param user_id:
@@ -42,14 +42,13 @@ class UserHistRepo:
 
         采用宽松模式，可部分删除
         '''
-        if not news_ids:
-            return 0
+        
         query = delete(UserNewsHistory).where(UserNewsHistory.user_id == user_id,UserNewsHistory.news_id.in_(news_ids))
         res = await self.db.execute(query)
-        await self.db.commit()
-        return res.rowcount
+        
+        return res.rowcount # type: ignore
 
-    async def get_all_history(self,user_id:int,page:int,pagesize:int):
+    async def get(self,user_id:int,page:int,pagesize:int):
         count_query = select(func.count()).where(UserNewsHistory.user_id==user_id)
         total = (await self.db.execute(count_query)).scalar_one()
 
@@ -62,8 +61,8 @@ class UserHistRepo:
         rows = (await self.db.execute(query)).all()
         return rows,total
 
-    async def remove_all(self,user_id:int):
+    async def remove(self,user_id:int):
         query = delete(UserNewsHistory).where(UserNewsHistory.user_id == user_id)
         res = await self.db.execute(query)
-        await self.db.commit()
-        return res.rowcount
+        await self.db.flush()  # 确保删除操作被执行
+        return res.rowcount # type: ignore
