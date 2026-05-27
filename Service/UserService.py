@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from functools import wraps
 from typing import Annotated, Any, Callable, Coroutine
 
@@ -7,7 +6,7 @@ from pydantic import HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from Config.DataBaseConfig import get_db
-from Exception import UserException, ResponseCode, BaseBusinessException
+from Exception import UserException, ResponseCode
 from Repo import UserRepo
 from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserProfileUpdate, \
     UserPwdAuth, UserPwdResetAuth
@@ -18,10 +17,7 @@ from Utils.HashUtil import get_hashed_id
 from Utils.FileUtil import upload_file
 from models.User import User
 from Utils.RedisUtil import redis_client
-
-'''
-用户Service操作，掌握事务主动权
-'''
+from Utils.TransactionMixin import TransactionMixin
 
 
 def transactional(
@@ -34,7 +30,8 @@ def transactional(
     return wrapper
 
 
-class UserService:
+class UserService(TransactionMixin):
+    _business_exception_type = UserException
 
     # 注入Repo和db，db是为了得在service层进行事务控制
     def __init__(
@@ -45,27 +42,8 @@ class UserService:
         self.repo = repo
         self.db = db
 
-    @asynccontextmanager
-    async def transaction_scope(self):
-        try:
-            yield
-            await self.db.commit()
-        except UserException:
-            await self.db.rollback()
-            raise
-        except Exception as e:
-            log.error(f"未捕获的系统异常: {e}")
-            await self.db.rollback()
-            raise BaseBusinessException(code=ResponseCode.DATABASE_ERROR)
-
-    async def _get_user_by_email(self, email: str) -> User:
-        user = await self.repo.get_user_dynamic(email=email)
-        if not user:
-            raise UserException(code=ResponseCode.USER_NOT_FOUND)
-        return user
-
-    async def _get_user_by_id(self, user_id: int) -> User:
-        user = await self.repo.get_user_dynamic(user_id=user_id)
+    async def _get_user(self, *, email: str | None = None, user_id: int | None = None) -> User:
+        user = await self.repo.get_user_dynamic(user_id=user_id, email=email)
         if not user:
             raise UserException(code=ResponseCode.USER_NOT_FOUND)
         return user
@@ -111,7 +89,7 @@ class UserService:
 
     @transactional
     async def delete_user(self, user_email: str):
-        user = await self._get_user_by_email(user_email)
+        user = await self._get_user(email=user_email)
         '''
         硬删除可能对用户操作不好，没有反悔机会，万一不小心注销了呢？
         所以得使用软删除，具体就是在数据库表中加入is_delete（置为True）、delete_time字段

@@ -149,6 +149,29 @@ const HistAPI = {
   },
 };
 
+// ==================== Theme Management ====================
+function getTheme() {
+  return localStorage.getItem('theme') || 'light';
+}
+function setTheme(theme) {
+  localStorage.setItem('theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeBtn();
+}
+function toggleTheme() {
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+function updateThemeBtn() {
+  document.querySelectorAll('.theme-toggle-btn').forEach(function(btn) {
+    btn.textContent = getTheme() === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+  });
+}
+function initTheme() {
+  var t = getTheme();
+  document.documentElement.setAttribute('data-theme', t);
+  updateThemeBtn();
+}
+
 // ==================== Common APIs ====================
 const CommonAPI = {
   sendCode(email) {

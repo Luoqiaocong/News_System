@@ -4,10 +4,7 @@ from sqlalchemy import  update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from Config.DataBaseConfig import get_db
-from Exception import ResponseCode
-from Schemas.UserSchema import UserRequest, UserPwdResetAuth
-from Exception.BusinessException import UserException
-from Utils.LogUtil import log
+from Schemas.UserSchema import UserRequest
 from models.User import User
 
 from sqlalchemy import select
@@ -23,14 +20,7 @@ class UserRepo:
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()
 
-    async def get_by_email(self, email: str)-> User | None:
-        return await self._get_user_base(select(User).where(User.email == email))
-
-    async def get_by_id(self, user_id: int):
-        # 使用主键查询最快的方式
-        return await self.db.get(User, user_id)
-
-    async def get_user_dynamic(self,user_id:int=None, email:str=None)-> User | None:
+    async def get_user_dynamic(self,user_id:int=None, email:str=None)-> User | None: # type: ignore
         if user_id: return await self.db.get(User, user_id) # 这里警告是IDE误报，正常也是返回一个User对象
         if email:return await self._get_user_base(select(User).where(User.email == email))
         return None
@@ -89,27 +79,4 @@ class UserRepo:
     async def change_password(self, new_pwd:str, user: User):
         user.password = new_pwd
         await self.db.flush()
-
-    # async def reset_password(self, user_request: UserPwdResetAuth):
-    #     """
-    #     重置用户密码
-    #     """
-    #     # 2. 执行更新
-    #     query = update(User).where(User.email == user_request.email).values(password=user_request.new_pwd)
-    #     res = await  self.db.execute(query)
-
-    #     # 3. 检查是否找到用户
-    #     if res.rowcount == 0:
-    #         await  self.db.rollback()
-    #         raise UserException(code=ResponseCode.USER_NOT_FOUND)
-
-    #     # 4. 提交事务
-    #     try:
-    #         await  self.db.commit()
-    #     except Exception as e:
-    #         await  self.db.rollback()
-    #         log.error(f"'{user_request.email}'重置密码失败，失败原因：{e}")
-    #         raise UserException(code=ResponseCode.DATABASE_ERROR, msg="密码重置失败")
-
-
 

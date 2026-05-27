@@ -20,7 +20,7 @@ class RegisterUserRequest(UserRequest):
 
 
 class LoginUserRequest(UserRequest):
-    code: Annotated[str, Field(description="验证码")] = None
+    pass
 
 
 class UserProfileBase(BaseModel):
@@ -29,7 +29,6 @@ class UserProfileBase(BaseModel):
     bio: Annotated[str | None, Field(description="个人简介", max_length=100)] = None
 
 
-UserProfileResponse = UserProfileBase
 UserProfileUpdate = UserProfileBase
 
 
@@ -40,13 +39,6 @@ class UserInfo(UserIdentity, UserProfileBase):
         return get_hashed_id(id)
 
     model_config = {"from_attributes": True}
-
-# class UserAuth(UserInfo):
-#     model_config = {
-#         "from_attributes": True  # 支持 ORM 对象
-#     }
-#
-#     password: Annotated[str, Field(description="密码")]
 
 
 class UserToken(BaseModel):

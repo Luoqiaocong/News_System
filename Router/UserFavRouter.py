@@ -5,16 +5,16 @@ from starlette import status
 from fastapi_utils.cbv import cbv
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.UserSchema import UserInfo
+from models.User import User
 from Service import UserFavService
 
 router = APIRouter(prefix="/api/user/news/fav", tags=["用户收藏"],route_class=UnifiedRoute)
 
 @cbv(router)
-class UserFavRouter():
+class UserFavRouter:
 
     service: UserFavService = Depends()
-    current_user: UserInfo = Depends(JWTAuth.get_current_user)
+    current_user: User = Depends(JWTAuth.get_current_user)
 
     @router.post("/{news_id}", status_code=status.HTTP_201_CREATED, summary="添加收藏")
     async def add(

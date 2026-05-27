@@ -73,6 +73,6 @@ def register_exception(app: FastAPI):
             content={
                 "code": ResponseCode.INTERNAL_ERROR.code,
                 "message": "服务器开小差了，请稍后再试",
-                "data": str(exc) if app.debug else None
+                "data": str(exc) if getattr(app, "debug", False) else None
             }
         )

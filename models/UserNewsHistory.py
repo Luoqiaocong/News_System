@@ -18,4 +18,4 @@ class UserNewsHistory(Base):
                                          comment="用户Id")
     news_id: Mapped[int] = mapped_column(Integer, ForeignKey("news.id", ondelete="CASCADE"), nullable=False,
                                          comment="新闻id")
-    viewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(), comment="浏览时间")
+    viewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now, comment="浏览时间")

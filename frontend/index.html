@@ -6,6 +6,9 @@
   <title>Seven新闻</title>
   <link rel="icon" href="img/news.ico" />
   <link rel="stylesheet" href="css/style.css" />
+  <script>
+    (function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+  </script>
   <script src="js/vue.global.prod.js"></script>
   <script src="js/api.js"></script>
 </head>
@@ -19,6 +22,7 @@
           <span>Seven新闻</span>
         </div>
         <div class="header-actions">
+          <button class="theme-toggle-btn" @click="toggleDark" title="切换主题">🌙</button>
           <button class="search-toggle" @click="showSearch = !showSearch" title="搜索新闻">🔍</button>
           <template v-if="loggedIn">
             <span class="header-nickname" @click="openProfile">
@@ -530,6 +534,7 @@
         function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
         function goFavorites() { window.location.href = 'favorites.html'; }
         function goHistory() { window.location.href = 'history.html'; }
+        function toggleDark() { toggleTheme(); }
 
         function doSearch() {
           const q = searchQuery.value.trim();
@@ -716,6 +721,7 @@
           const params = new URLSearchParams(window.location.search);
           const cid = parseInt(params.get('categoryId')) || 0;
           if (cid) currentCategoryId.value = cid;
+          initTheme();
           if (window.isLoggedIn()) await loadUser();
           await fetchCategories();
           await fetchNews();
@@ -736,7 +742,7 @@
           loginFormValid, regFormValid, resetFormValid, profilePwdValid,
           calcRegPwdStrength, calcResetPwdStrength, calcProfilePwdStrength,
           showToast, formatDate,
-          selectCategory, goPage, goHome, goDetail, goFavorites, goHistory,
+          selectCategory, goPage, goHome, goDetail, goFavorites, goHistory, toggleDark,
           showAuth, closeAuthModal, closeResetModal, resetToLogin, doSearch, resetSearch,
           handleLogin, handleRegister, handleResetPwd, sendRegCode, sendResetCode, doLogout,
           openProfile, closeProfileModal, onAvatarFileChange, handleUpdateProfile,

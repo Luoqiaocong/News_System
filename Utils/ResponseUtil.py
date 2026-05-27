@@ -33,20 +33,3 @@ def success_response(
         message=message or success_code.message,
         data=data,
     )
-
-
-
-# 实际上这一部分交给了全局异常处理，这个函数并没有实际被调用
-def error_response(
-        status_code: int = 400,
-        error_code:ResponseCode = ResponseCode.PARAM_ERROR,
-        message: Optional[str] = None,
-        data: Any = None
-) -> JSONResponse:
-    """失败响应 - 也返回 HTTP 200，用业务 code 区分错误"""
-    return base_response(
-        status_code=status_code,
-        code=error_code.code,
-        message=message or error_code.message,
-        data=data,
-    )

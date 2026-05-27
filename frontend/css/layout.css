@@ -1,0 +1,128 @@
+/* ==================== Header ==================== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(79, 70, 229, 0.08);
+  box-shadow: 0 1px 8px rgba(79, 70, 229, 0.04);
+  padding: 0 20px;
+}
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+.header-logo {
+  font-size: 22px;
+  font-weight: 700;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.header-logo .logo-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--primary-gradient);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  -webkit-text-fill-color: white;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-nickname {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+.header-nickname:hover {
+  color: var(--primary);
+}
+.header-nickname .wave {
+  display: inline-block;
+  animation: wave 1.5s ease-in-out infinite;
+  font-size: 15px;
+}
+.header-avatar {
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(37, 99, 235, 0.2);
+  transition: border-color var(--transition), transform var(--transition);
+}
+.header-avatar:hover {
+  border-color: var(--primary);
+  transform: scale(1.1);
+}
+
+/* ==================== Main Container ==================== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 20px;
+}
+
+/* ==================== News Grid ==================== */
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+/* ==================== Category Tabs ==================== */
+.category-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+}
+.category-tab {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-500);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+.category-tab:hover {
+  color: var(--primary);
+  background: rgba(79, 70, 229, 0.06);
+}
+.category-tab.active {
+  background: var(--primary-gradient);
+  color: var(--white);
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+}

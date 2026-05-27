@@ -1,20 +1,20 @@
 import json
-from contextlib import asynccontextmanager
 from typing import Annotated, Optional
 from fastapi import Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import NewsException, ResponseCode
-from Exception.BusinessException import BaseBusinessException
 from Repo import NewsRepo, NewsCacheRepo, UserHistRepo
 from Schemas.NewsSchema import CategoryData, NewsData, NewsDetailResponse, NewsListResponse, NewsListCard, RelatedNewsCard
-from Schemas.UserSchema import UserInfo
+from models.User import User
 from Utils.ServiceDecorator import handle_service_exception
 from Utils.RedisUtil import redis_cache_decorator
-from Utils.LogUtil import log
+from Utils.TransactionMixin import TransactionMixin
 
 
-class NewsService:
+class NewsService(TransactionMixin):
+    _business_exception_type = NewsException
+
     def __init__(self,
                 repo: Annotated[NewsRepo, Depends()],
                 Histrepo:Annotated[UserHistRepo, Depends()],
@@ -22,19 +22,6 @@ class NewsService:
         self.repo = repo
         self.histrepo = Histrepo
         self.db = db
-
-    @asynccontextmanager
-    async def transaction_scope(self):
-        try:
-            yield  # 这里会执行 async with 块内部的代码
-            await self.db.commit()
-        except NewsException:
-            await self.db.rollback()
-            raise
-        except Exception as e:
-            log.error(f"未捕获的系统异常: {e}")
-            await self.db.rollback()
-            raise BaseBusinessException(code=ResponseCode.DATABASE_ERROR)
 
     @redis_cache_decorator(
         key_prefix="news:categories:{category_id}",
@@ -104,7 +91,7 @@ class NewsService:
     async def handle_news_view(
             self,
             news_id: int,
-            user:UserInfo
+            user: User
     ):
         """
         统一处理浏览逻辑：

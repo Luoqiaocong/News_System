@@ -32,11 +32,6 @@ class UserFavRepo:
         res = await self.db.execute(query)
         return res.rowcount # type: ignore
 
-    async def check(self, news_id: int, user_id: int) -> bool:
-        query = select(UserFavorite).filter_by(user_id=user_id, news_id=news_id).limit(1)
-        res = await self.db.execute(query)
-        return res.scalar() is not None
-
     async def get(self, user_id: int, page: int, page_size: int):
         count_query = select(func.count()).where(UserFavorite.user_id == user_id)
         total = (await self.db.execute(count_query)).scalar_one()

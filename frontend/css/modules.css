@@ -1,0 +1,543 @@
+/* ==================== Modal Overlay ==================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease;
+}
+
+/* ==================== Auth Modal ==================== */
+.auth-modal {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  overflow: hidden;
+  width: 820px;
+  max-width: 95vw;
+  min-height: 520px;
+}
+.auth-form-container {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  transition: all 0.6s ease-in-out;
+}
+.auth-form-container.login {
+  left: 0;
+  z-index: 2;
+}
+.auth-form-container.register {
+  left: 0;
+  opacity: 0;
+  z-index: 1;
+}
+.auth-modal.slide-right .auth-form-container.login {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.auth-modal.slide-right .auth-form-container.register {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: showPanel 0.6s;
+}
+.auth-form {
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 40px;
+  height: 100%;
+  text-align: center;
+}
+.auth-form h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #444;
+  margin-bottom: 20px;
+}
+.auth-form .form-group {
+  width: 100%;
+  margin-bottom: 14px;
+}
+.auth-form .form-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  outline: none;
+  background: #f9f9f9;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.auth-form .form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background: var(--white);
+}
+.auth-form .main-btn {
+  border-radius: 25px;
+  border: none;
+  background: var(--primary-gradient);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 50px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-top: 20px;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+.auth-form .main-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+.auth-form .main-btn:active {
+  transform: scale(0.97);
+}
+.auth-form .alt-link {
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: color var(--transition);
+}
+.auth-form .alt-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+.auth-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 0.6s ease-in-out;
+  z-index: 100;
+}
+.auth-modal.slide-right .auth-overlay-container {
+  transform: translateX(-100%);
+}
+.auth-overlay {
+  background: var(--primary-gradient);
+  color: var(--white);
+  position: relative;
+  left: -100%;
+  height: 100%;
+  width: 200%;
+  transform: translateX(0);
+  transition: transform 0.6s ease-in-out;
+}
+.auth-modal.slide-right .auth-overlay {
+  transform: translateX(50%);
+}
+.auth-overlay-panel {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 40px;
+  text-align: center;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  transition: transform 0.6s ease-in-out;
+}
+.auth-overlay-panel h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.auth-overlay-panel p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+.auth-overlay-panel.left {
+  transform: translateX(-20%);
+}
+.auth-overlay-panel.right {
+  right: 0;
+  transform: translateX(0);
+}
+.auth-modal.slide-right .auth-overlay-panel.left {
+  transform: translateX(0);
+}
+.auth-modal.slide-right .auth-overlay-panel.right {
+  transform: translateX(20%);
+}
+.ghost-btn {
+  background: transparent;
+  border: 2px solid var(--white);
+  color: var(--white);
+  border-radius: 25px;
+  padding: 10px 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all var(--transition);
+}
+.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.auth-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  transition: all var(--transition);
+}
+.auth-close-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #333;
+}
+
+/* ==================== Profile Modal ==================== */
+.profile-modal {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: 44px 28px 32px;
+  max-width: 420px;
+  width: 92vw;
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.35s ease;
+}
+.profile-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 100px;
+  background: linear-gradient(180deg, rgba(79,70,229,0.08) 0%, transparent 100%);
+  pointer-events: none;
+}
+.profile-modal .close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+.profile-modal .close-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* ==================== Avatar Upload ==================== */
+.avatar-upload-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+.avatar-upload {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: visible;
+}
+.avatar-upload img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background: linear-gradient(var(--white), var(--white)) padding-box,
+              var(--primary-gradient) border-box;
+  transition: all var(--transition);
+}
+.avatar-upload .avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gray-100), rgba(79, 70, 229, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: var(--gray-400);
+  border: 3px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              var(--primary-gradient) border-box;
+  transition: all var(--transition);
+}
+.avatar-upload .avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.avatar-upload:hover .avatar-overlay {
+  opacity: 1;
+}
+.avatar-upload .avatar-overlay .camera-icon {
+  font-size: 24px;
+  color: white;
+}
+.avatar-upload .avatar-overlay .hint-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.avatar-upload input[type="file"] {
+  display: none;
+}
+
+/* ==================== User Profile ==================== */
+.profile-info {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.profile-email {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+.profile-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  background: var(--gray-100);
+  border-radius: 12px;
+  padding: 4px;
+}
+.profile-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  border-radius: 10px;
+  text-align: center;
+  transition: all var(--transition);
+}
+.profile-tab:hover {
+  color: var(--gray-700);
+}
+.profile-tab.active {
+  background: var(--white);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+.profile-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.profile-stat-card {
+  flex: 1;
+  text-align: center;
+  padding: 18px 8px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.04), rgba(6, 182, 212, 0.04));
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1px solid rgba(79, 70, 229, 0.08);
+}
+.profile-stat-card:hover {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(6, 182, 212, 0.1));
+  border-color: rgba(79, 70, 229, 0.2);
+  transform: translateY(-2px);
+}
+.profile-stat-card:last-child {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.04), rgba(249, 115, 22, 0.04));
+  border-color: rgba(244, 63, 94, 0.08);
+}
+.profile-stat-card:last-child:hover {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.1), rgba(249, 115, 22, 0.1));
+  border-color: rgba(244, 63, 94, 0.2);
+}
+.profile-stat-card .count {
+  font-size: 24px;
+  font-weight: 700;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.profile-stat-card:last-child .count {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.profile-stat-card .label {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 4px;
+}
+
+/* ==================== Confirm Modal ==================== */
+.confirm-modal {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: 28px 30px;
+  max-width: 420px;
+  width: 92vw;
+  text-align: center;
+  animation: slideUp 0.3s ease;
+}
+.confirm-modal h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--gray-800);
+}
+.confirm-modal p {
+  font-size: 14px;
+  color: var(--gray-500);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.confirm-modal .modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ==================== Favorites / History Page ==================== */
+.fav-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.fav-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.fav-title {
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gray-800);
+}
+.fav-title-bar {
+  display: inline-block;
+  width: 5px;
+  height: 24px;
+  background: var(--primary-gradient);
+  border-radius: 3px;
+}
+.fav-count {
+  font-size: 13px;
+  color: var(--gray-400);
+  background: var(--gray-100);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.fav-hero-actions {
+  display: flex;
+  gap: 8px;
+}
+.fav-hero-actions .btn-outline.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.fav-news-card {
+  position: relative;
+}
+.fav-card-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(6px);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.2s ease;
+}
+.fav-news-card:hover .fav-card-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+.fav-card-remove:hover {
+  background: var(--danger-light);
+  transform: scale(1.1);
+}
+.fav-card-remove:hover span {
+  filter: grayscale(0);
+}
+.fav-card-remove span {
+  font-size: 13px;
+  filter: grayscale(0.3);
+  transition: filter 0.2s;
+}
+.fav-card-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+}
+.fav-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+.fav-time {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 6px;
+}

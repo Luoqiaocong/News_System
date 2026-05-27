@@ -9,14 +9,6 @@ from Config.AliyunOssConfig import settings, bucket
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
-async def calculate_md5(file: UploadFile):
-    md5_hash = hashlib.md5()
-    while chunk := await file.read(8192):
-        md5_hash.update(chunk)
-    await file.seek(0)
-    return md5_hash.hexdigest()
-
-
 async def upload_file(
         file_model: str,
         filepath: UploadFile,

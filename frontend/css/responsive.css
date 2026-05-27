@@ -1,0 +1,36 @@
+@media (max-width: 860px) {
+  .auth-modal {
+    width: 95vw;
+    min-height: auto;
+  }
+  .auth-form-container {
+    position: relative;
+    width: 100%;
+  }
+  .auth-overlay-container {
+    display: none;
+  }
+  .auth-form-container.register {
+    position: absolute;
+    top: 0;
+    left: 100%;
+  }
+  .auth-modal.slide-right .auth-form-container.login {
+    transform: translateX(-100%);
+  }
+  .auth-modal.slide-right .auth-form-container.register {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 700px) {
+  .news-grid {
+    grid-template-columns: 1fr;
+  }
+  .container {
+    padding: 16px;
+  }
+  .profile-modal {
+    padding: 24px 18px;
+  }
+}

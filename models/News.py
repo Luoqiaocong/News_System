@@ -26,10 +26,10 @@ class News(Base):
     id:Mapped[int] = mapped_column(Integer,primary_key=True,autoincrement=True,comment="新闻ID")
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey(Category.id), nullable=False, comment="新闻类型ID")
     title:Mapped[str] = mapped_column(String(255),nullable=False,comment="新闻标题")
-    author:Mapped[Optional[str]] = mapped_column(String(255),nullable=False,comment="新闻发布栏目")
+    author:Mapped[str] = mapped_column(String(255),nullable=False,comment="新闻发布栏目")
     publish_time:Mapped[datetime] = mapped_column(DateTime,default=datetime.now,comment="新闻发布时间")
     views: Mapped[int] = mapped_column(Integer, default=0, nullable=False, comment="浏览量")
-    summary:Mapped[Optional[str]] = mapped_column(Text,nullable=False,comment="新闻简介")
+    summary:Mapped[str] = mapped_column(Text,nullable=False,comment="新闻简介")
     content:Mapped[str] = mapped_column(Text,nullable=False,comment="新闻内容")
     thumbnail:Mapped[Optional[str]] = mapped_column(String(255),comment="新闻图片地址")
 

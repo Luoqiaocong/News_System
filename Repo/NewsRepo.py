@@ -26,22 +26,18 @@ class NewsRepo:
         return (await self.db.execute(select(Category))).scalars().all()
 
     async def get_news(self, category_id: int, skip: int = 0, limit: int = 10):
+        count_query = select(func.count(News.id))
+        news_query = select(News)
         if category_id:
-            count_query = select(func.count(News.id)).where(News.category_id == category_id)
-        else:
-            count_query = select(func.count(News.id))
+            count_query = count_query.where(News.category_id == category_id)
+            news_query = news_query.where(News.category_id == category_id)
 
-        count_result = (await self.db.execute(count_query)).scalar_one()
-        if count_result == 0:
+        total = (await self.db.execute(count_query)).scalar_one()
+        if total == 0:
             return [], 0
 
-        if category_id:
-            news_query = select(News).where(News.category_id == category_id)
-        else:
-            news_query = select(News)
-
-        news_result = (await self.db.execute(news_query.offset(skip).limit(limit))).scalars().all()
-        return news_result, count_result
+        rows = (await self.db.execute(news_query.offset(skip).limit(limit))).scalars().all()
+        return rows, total
 
     async def get_news_detail(self,news_id: int):
         """

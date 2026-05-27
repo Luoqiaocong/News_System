@@ -5,17 +5,16 @@ from fastapi_utils.cbv import cbv
 from starlette import status
 
 from Dependency import JWTAuth
-from Route.UnifiedRoute import UnifiedRoute
-from Schemas.UserSchema import UserInfo
+from models.User import User
 from Service import UserHistService
 
-router = APIRouter(prefix="/api/user/news/hist", tags=["用户浏览历史"],route_class=UnifiedRoute)
+router = APIRouter(prefix="/api/user/news/hist", tags=["用户浏览历史"])
 
 
 @cbv(router)
 class UserHistRouter:
     service: UserHistService = Depends()
-    current_user: UserInfo = Depends(JWTAuth.get_current_user)
+    current_user: User = Depends(JWTAuth.get_current_user)
 
 
     @router.delete("/delete", summary="删除浏览历史", status_code=status.HTTP_200_OK)

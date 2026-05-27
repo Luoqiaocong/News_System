@@ -3,46 +3,30 @@ from sqlalchemy.orm import DeclarativeBase
 from Config.settings import settings
 
 
-DB_USER = settings.DB_USER
-DB_PASSWORD = settings.DB_PASSWORD
-DB_HOST = settings.DB_HOST
-DB_PORT = settings.DB_PORT
-DB_NAME = settings.DB_NAME
-
 # ==================== 数据库配置 ====================
 ASYNC_DATABASE_URL = (
-    f"mysql+aiomysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+    f"mysql+aiomysql://{settings.DB_USER}:{settings.DB_PASSWORD}"
+    f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}?charset=utf8mb4"
 )
 
 engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=False,                    # 生产关闭
-    future=True,                   # 使用 2.0 风格
-    pool_size=15,                  # 根据实际并发调整
+    echo=False,
+    future=True,
+    pool_size=15,
     max_overflow=25,
     pool_timeout=30,
-    pool_pre_ping=True,            # 防僵尸连接
-    pool_recycle=3600,             # 每小时回收一次
-    pool_use_lifo=True,            # 可选优化
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    pool_use_lifo=True,
 )
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False,        # 强烈推荐
-    autoflush=False,               # 推荐关闭
+    expire_on_commit=False,
+    autoflush=False,
 )
-
-# async def get_db():
-#     async with AsyncSessionLocal() as session:
-#         try:
-#             yield session
-#             await session.commit()
-#         except Exception:
-#             await session.rollback()
-#             raise
-#         finally:
-#             await session.close()
 
 
 async def get_db():

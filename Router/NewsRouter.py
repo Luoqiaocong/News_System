@@ -7,7 +7,7 @@ from fastapi_utils.cbv import cbv
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
 from Schemas.NewsSchema import CategoryData
-from Schemas.UserSchema import UserInfo
+from models.User import User
 from Service import NewsService
 from Utils.ResponseUtil import success_response
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/news", tags=["新闻模块"],route_class=Unified
 @cbv(router)
 class NewsRouterAPI:
     service :NewsService = Depends()
-    current_user :UserInfo = Depends(JWTAuth.get_current_user_optional)
+    current_user :User = Depends(JWTAuth.get_current_user_optional)
 
     @router.get("/categories",summary="获取新闻分类")
     async def get_categories(self,
@@ -51,6 +51,6 @@ class NewsRouterAPI:
             start_date: Annotated[Optional[str], Query(description="开始日期，格式YYYY-MM-DD", alias="startDate")] = None,
             end_date: Annotated[Optional[str], Query(description="结束日期，格式YYYY-MM-DD", alias="endDate")] = None,
             page: Annotated[int, Query(ge=1, description="页码", alias="page")] = 1,
-            pagesize: Annotated[int, Query(ge=1, le=50, description="每页新闻数量", alias="pagesize")] = 6,
+            page_size: Annotated[int, Query(ge=1, le=50, description="每页新闻数量", alias="pagesize")] = 6,
     ):
-        return await self.service.search_news(query, category_id, start_date, end_date, page, pagesize)
+        return await self.service.search_news(query, category_id, start_date, end_date, page, page_size)

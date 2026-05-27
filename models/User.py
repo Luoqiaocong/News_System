@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, DateTime,  Index, Integer, ForeignKey
+from sqlalchemy import String, DateTime,  Index
 from sqlalchemy.orm import  Mapped, mapped_column
 
 
@@ -52,15 +52,5 @@ class User(TimeStamp):
     )
 
     def __repr__(self):
-        return None
-
-
-class UserToken(Base):
-    __tablename__ = "user_token"
-
-    id:Mapped[int] = mapped_column(primary_key=True, autoincrement=True, comment="登录凭证ID")
-    user_id:Mapped[int] = mapped_column(Integer, ForeignKey("user.id", ondelete="CASCADE"),nullable=False, comment="用户ID")
-    token: Mapped[str] = mapped_column(String(255), nullable=False, comment="登录凭证Token")
-    expire_at:Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="过期时间")
-    created_at:Mapped[datetime] = mapped_column(DateTime, default=datetime.now, comment="创建时间")
+        return f"<User(id={self.id}, email={self.email})>"
 
