@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Seven新闻</title>
+  <title>Seven News</title>
   <link rel="icon" href="img/news.ico" />
   <link rel="stylesheet" href="css/style.css" />
   <script>
@@ -18,15 +18,15 @@
     <header class="header">
       <div class="header-inner">
         <div class="header-logo" @click="goHome">
-          <span class="logo-icon">S</span>
-          <span>Seven新闻</span>
+          <span class="logo-icon">SN</span>
+          <span>Seven News</span>
         </div>
         <div class="header-actions">
           <button class="theme-toggle-btn" @click="toggleDark" title="切换主题">🌙</button>
           <button class="search-toggle" @click="showSearch = !showSearch" title="搜索新闻">🔍</button>
           <template v-if="loggedIn">
             <span class="header-nickname" @click="openProfile">
-              <span class="wave">👋</span>
+              <span class="wave">😄</span>
               {{ user.nickname || user.email?.split('@')[0] || '用户' }}
             </span>
             <img
@@ -199,7 +199,7 @@
         <form @submit.prevent="handleResetPwd" autocomplete="off">
           <div class="form-group">
             <label class="form-label">邮箱</label>
-            <input :value="resetForm.email" type="email" class="form-input" disabled />
+            <input v-model="resetForm.email" type="email" class="form-input" placeholder="请输入邮箱" required />
           </div>
           <div class="form-group">
             <label class="form-label">新密码</label>

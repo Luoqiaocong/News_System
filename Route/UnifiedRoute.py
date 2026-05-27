@@ -9,7 +9,7 @@ from Utils.ResponseUtil import success_response
 
 
 CODE_MAP = {
-    201: ResponseCode.CREATED,  # Created -> 注册成功
+    201: ResponseCode.CREATED,  # Created -> 创建成功
     204: ResponseCode.NO_CONTENT,  # No Content -> 删除成功
     200: ResponseCode.SUCCESS   # SUCCESS -> 通用成功
 }

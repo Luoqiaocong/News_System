@@ -18,7 +18,7 @@ from Utils.FileUtil import upload_file
 from models.User import User
 from Utils.RedisUtil import redis_client
 from Utils.TransactionMixin import TransactionMixin
-
+from Utils.SecurityUtil import pwd_manager
 
 def transactional(
     func: Callable[..., Coroutine[Any, Any, Any]]
@@ -50,9 +50,9 @@ class UserService(TransactionMixin):
 
     async def _verify_code(self, email: str, code: str) -> None:
         key = f"user:verifyCode:{email}"
-        stored_code = await redis_client.get(key)
+        stored_code = await redis_client._redis.get(key)
         if stored_code != code:
-            log.error(f"期望-->{stored_code},收到-->{code}")
+            log.error(f"验证码不匹配，期望: {repr(stored_code)}, 收到: {repr(code)}")
             raise UserException(code=ResponseCode.CODE_VERIFY_FAILED)
         await redis_client.delete(key)
 
@@ -67,6 +67,9 @@ class UserService(TransactionMixin):
 
         # 验证码校验
         await self._verify_code(userdata.email, userdata.code)
+
+        hashed_password = await pwd_manager.hash(userdata.password)
+        userdata.password = hashed_password
 
         await self.repo.create(userdata)
 
@@ -129,7 +132,9 @@ class UserService(TransactionMixin):
     @transactional
     async def update_user_password(self, pwd_data: UserPwdAuth, user: User):
         log.info(f"{user.email}请求修改密码")
-        SecurityUtil.verify_password(pwd_data.cur_pwd, user)
+
+        if not await pwd_manager.verify(pwd_data.cur_pwd, user.password):
+            raise UserException(code=ResponseCode.USER_PWD_AUTH_FAILED)
 
         if pwd_data.cur_pwd == pwd_data.new_pwd:
             raise UserException(code=ResponseCode.USER_PWD_SAME)
@@ -147,6 +152,6 @@ class UserService(TransactionMixin):
         SecurityUtil.validate_password_strength(user_request.new_pwd)
 
         await self._verify_code(user_request.email, user_request.code)
-        user = await self._get_user_by_email(user_request.email)
+        user = await self._get_user(email=user_request.email)
         await self.repo.change_password(user_request.new_pwd, user)
         log.info(f"{user.email}重置密码成功")

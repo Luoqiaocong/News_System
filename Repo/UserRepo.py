@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Schemas.UserSchema import UserRequest
 from models.User import User
-
+from Utils.SecurityUtil import pwd_manager
 from sqlalchemy import select
 
 
@@ -20,7 +20,7 @@ class UserRepo:
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()
 
-    async def get_user_dynamic(self,user_id:int=None, email:str=None)-> User | None: # type: ignore
+    async def get_user_dynamic(self,user_id:int|None=None, email:str|None=None)-> User | None: # type: ignore
         if user_id: return await self.db.get(User, user_id) # 这里警告是IDE误报，正常也是返回一个User对象
         if email:return await self._get_user_base(select(User).where(User.email == email))
         return None
@@ -31,19 +31,16 @@ class UserRepo:
         await self.db.flush()  # 不作提交
 
     async def login(self, userdata: UserRequest):
-        # 1. 先根据邮箱捞出用户
         stmt = select(User).where(User.email == userdata.email)
         result = await self.db.execute(stmt)
         user = result.scalar_one_or_none()
 
-        # 2. 逻辑判断
         if not user:
             return None
 
-        if user.password != userdata.password:
+        if not await pwd_manager.verify(userdata.password, user.password):
             return None
 
-        # 3. 验证成功
         return user
 
     async def set_token(self, user_id: int, token: str):
@@ -77,6 +74,6 @@ class UserRepo:
         return row.rowcount > 0 # type: ignore
 
     async def change_password(self, new_pwd:str, user: User):
-        user.password = new_pwd
+        user.password = await pwd_manager.hash(new_pwd) # type: ignore
         await self.db.flush()
 
