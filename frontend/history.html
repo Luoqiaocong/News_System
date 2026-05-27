@@ -26,6 +26,7 @@
             v-if="loggedIn"
             :src="avatarSrc"
             class="header-avatar"
+            @click="goHome"
             title="个人中心"
           />
           <button class="btn btn-ghost btn-sm" @click="goHome">← 返回首页</button>
@@ -173,7 +174,7 @@
           catch (e) { showToast(e.message, 'error'); }
         }
 
-        function goDetail(id) { window.location.href = 'detail.html?id=' + id + '&from=history'; }
+        function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
         function goHome() { window.location.href = 'index.html'; }
         function goFavorites() { window.location.href = 'favorites.html'; }
 

@@ -5,11 +5,8 @@ from starlette import status
 from fastapi_utils.cbv import cbv
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.UserFavSchema import FavoriteNewsItem, UserFavResponse
 from Schemas.UserSchema import UserInfo
 from Service import UserFavService
-from Utils.LogUtil import log
-from Utils.ResponseUtil import success_response
 
 router = APIRouter(prefix="/api/user/news/fav", tags=["用户收藏"],route_class=UnifiedRoute)
 

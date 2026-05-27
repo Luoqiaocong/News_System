@@ -2,10 +2,7 @@ import asyncio
 import random
 import string
 
-from fastapi import HTTPException
-from starlette import status
 from Utils.LogUtil import log
-from Exception import ResponseCode
 from Utils.RedisUtil import redis_client
 from Utils.EmailUtil import EmailHelper
 

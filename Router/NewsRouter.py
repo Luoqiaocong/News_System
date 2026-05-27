@@ -1,15 +1,12 @@
 # Router/NewsRouter.py
 from typing import Annotated,  Optional
 from fastapi import BackgroundTasks, Query, Path
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi_utils.cbv import cbv
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.NewsSchema import CategoryData, NewsData
-from Repo import NewsRepo
-from Config.DataBaseConfig import get_db
+from Schemas.NewsSchema import CategoryData
 from Schemas.UserSchema import UserInfo
 from Service import NewsService
 from Utils.ResponseUtil import success_response

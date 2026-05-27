@@ -3,12 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 
-from Config.DataBaseConfig import get_db, AsyncSessionLocal
 from Dependency.register_exception import register_exception
-from MIddleware import PerformanceMiddleware,UnifiedResponseMiddleware
+from MIddleware import PerformanceMiddleware
 from Router import NewsRouter, UserRouter, UserFavRouter, UserHistRouter, CommonRouter
 from Test.fileTest import router as test_router
-from Test.newsMock import warmup_all_categories_and_news
 from Utils.LogUtil import init_log
 from Utils.RedisUtil import redis_client
 from models import * # 确保所有模型都被导入过

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime,  Integer, ForeignKey, Column, UniqueConstraint
+from sqlalchemy import DateTime, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from Config.DataBaseConfig import Base

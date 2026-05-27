@@ -1,14 +1,10 @@
 from typing import Optional
 from datetime import datetime
 from fastapi import Depends
-from pydantic import BaseModel
 from sqlalchemy import and_, select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette import status
 
 from Config.DataBaseConfig import get_db
-from Exception.BusinessException import NewsException
-from Schemas.NewsSchema import NewsData
 from models.News import Category, News
 
 class NewsRepo:

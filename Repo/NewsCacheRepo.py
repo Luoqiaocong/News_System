@@ -1,5 +1,4 @@
 import json
-from typing import List, Optional
 from Utils.RedisUtil import redis_client
 
 

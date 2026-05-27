@@ -60,11 +60,17 @@
         </div>
       </div>
 
-      <div class="loading" v-if="loading"><span class="spinner"></span> 正在加载...</div>
+      <div class="loading" v-if="loading"><span class="spinner"></span> {{ searchMode ? '搜索中...' : '正在加载...' }}</div>
 
-      <div class="empty" v-else-if="newsList.length === 0">
+      <div class="empty" v-else-if="newsList.length === 0 && !searchMode">
         <div class="empty-icon">📭</div>
         <div class="empty-text">暂无新闻数据</div>
+      </div>
+
+      <div class="empty-state" v-else-if="searchMode && newsList.length === 0">
+        <div class="empty-circle"><span class="empty-emoji">🔍</span></div>
+        <h3 class="empty-heading">未找到相关新闻</h3>
+        <p class="empty-desc">试试其他关键词或调整日期范围</p>
       </div>
 
       <div class="news-grid" v-else-if="newsList.length > 0">
@@ -133,7 +139,7 @@
             </div>
             <div class="form-group">
               <div class="pwd-input-wrap">
-                <input v-model="registerForm.password" :type="regPwdVisible ? 'text' : 'password'" class="form-input" placeholder="密码" required @input="calcRegPwdStrength" autocomplete="new-password" />
+                <input v-model="registerForm.password" :type="regPwdVisible ? 'text' : 'password'" class="form-input" placeholder="密码" required @input="calcRegPwdStrength" @blur="regPwdBlurred = true" autocomplete="new-password" />
                 <button type="button" class="pwd-toggle" @click="regPwdVisible = !regPwdVisible" tabindex="-1">
                   {{ regPwdVisible ? '🙈' : '👁' }}
                 </button>
@@ -148,13 +154,13 @@
                 <span class="strength-text" :style="{ color: regPwdScore > 0 ? strengthColors[Math.min(regPwdScore - 1, 3)] : '#999' }">
                   {{ strengthLabels[regPwdScore] }}
                 </span>
-                <span class="strength-hint">需包含数字、大小写字母且至少8位</span>
+                <div class="form-error" v-if="regPwdBlurred && regPwdScore < 4">需包含数字、大小写字母且至少8位</div>
               </div>
             </div>
             <div class="form-group">
               <div class="form-row">
                 <input v-model="registerForm.code" type="text" class="form-input" placeholder="邮箱验证码" required style="flex:1" />
-                <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="codeCountdown > 0" @click="sendRegCode">
+                <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="codeCountdown > 0 || regPwdScore < 4" @click="sendRegCode">
                   {{ codeCountdown > 0 ? codeCountdown + 's' : '获取验证码' }}
                 </button>
               </div>
@@ -194,7 +200,7 @@
           <div class="form-group">
             <label class="form-label">新密码</label>
             <div class="pwd-input-wrap">
-              <input v-model="resetForm.newPwd" :type="resetPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required @input="calcResetPwdStrength" autocomplete="new-password" />
+              <input v-model="resetForm.newPwd" :type="resetPwdVisible ? 'text' : 'password'" class="form-input" placeholder="新密码" required @input="calcResetPwdStrength" @blur="resetPwdBlurred = true" autocomplete="new-password" />
               <button type="button" class="pwd-toggle" @click="resetPwdVisible = !resetPwdVisible" tabindex="-1">
                 {{ resetPwdVisible ? '🙈' : '👁' }}
               </button>
@@ -209,12 +215,13 @@
               <span class="strength-text" :style="{ color: resetPwdScore > 0 ? strengthColors[Math.min(resetPwdScore - 1, 3)] : '#999' }">
                 {{ strengthLabels[resetPwdScore] }}
               </span>
+              <div class="form-error" v-if="resetPwdBlurred && resetPwdScore < 4">密码强度不足，需包含数字、大小写字母且至少8位</div>
             </div>
           </div>
           <div class="form-group">
             <div class="form-row">
               <input v-model="resetForm.code" type="text" class="form-input" placeholder="验证码" required style="flex:1" />
-              <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="codeCountdown > 0" @click="sendResetCode">
+              <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="codeCountdown > 0 || resetPwdScore < 4" @click="sendResetCode">
                 {{ codeCountdown > 0 ? codeCountdown + 's' : '获取验证码' }}
               </button>
             </div>
@@ -363,6 +370,7 @@
         const currentCategoryId = ref(0);
         const loading = ref(false);
         const showSearch = ref(false);
+        const searchMode = ref(false);
         const searchQuery = ref('');
         const searchStartDate = ref('');
         const searchEndDate = ref('');
@@ -379,9 +387,11 @@
         const loginPwdVisible = ref(false);
         const registerForm = ref({ email: '', password: '', code: '' });
         const regPwdVisible = ref(false);
+        const regPwdBlurred = ref(false);
         const regPwdScore = ref(0);
         const resetForm = ref({ email: '', newPwd: '', code: '' });
         const resetPwdVisible = ref(false);
+        const resetPwdBlurred = ref(false);
         const resetPwdScore = ref(0);
 
         // --- Profile ---
@@ -485,8 +495,8 @@
 
         // --- Form cleanup ---
         function resetLoginForm() { loginForm.value = { email: '', password: '' }; loginPwdVisible.value = false; }
-        function resetRegisterForm() { registerForm.value = { email: '', password: '', code: '' }; regPwdVisible.value = false; regPwdScore.value = 0; }
-        function resetResetForm() { resetForm.value = { email: '', newPwd: '', code: '' }; resetPwdVisible.value = false; resetPwdScore.value = 0; }
+        function resetRegisterForm() { registerForm.value = { email: '', password: '', code: '' }; regPwdVisible.value = false; regPwdScore.value = 0; regPwdBlurred.value = false; }
+        function resetResetForm() { resetForm.value = { email: '', newPwd: '', code: '' }; resetPwdVisible.value = false; resetPwdScore.value = 0; resetPwdBlurred.value = false; }
         function resetPwdFields() { pwdForm.value = { cur_pwd: '', new_pwd: '' }; profileCurPwdVisible.value = false; profileNewPwdVisible.value = false; profilePwdScore.value = 0; pwdSameError.value = ''; }
 
         // --- News ---
@@ -494,7 +504,12 @@
         async function fetchNews() {
           loading.value = true;
           try {
-            const data = await NewsAPI.getList(currentCategoryId.value, currentPage.value, pageSize.value);
+            let data;
+            if (searchMode.value) {
+              data = await NewsAPI.search(searchQuery.value, currentPage.value, searchStartDate.value || undefined, searchEndDate.value || undefined, currentCategoryId.value);
+            } else {
+              data = await NewsAPI.getList(currentCategoryId.value, currentPage.value, pageSize.value);
+            }
             if (data && data.NewsList) { newsList.value = data.NewsList; total.value = data.total || 0; }
             else if (data && data.newsList) { newsList.value = data.newsList; total.value = data.total || 0; }
             else if (data && data.news_list) { newsList.value = data.news_list; total.value = data.total || 0; }
@@ -503,9 +518,15 @@
           } catch (e) { showToast(e.message, 'error'); newsList.value = []; }
           finally { loading.value = false; }
         }
-        function selectCategory(catId) { currentCategoryId.value = catId; currentPage.value = 1; fetchNews(); }
+        function selectCategory(catId) {
+          currentCategoryId.value = catId;
+          currentPage.value = 1;
+          const url = catId ? 'index.html?categoryId=' + catId : 'index.html';
+          history.replaceState(null, '', url);
+          fetchNews();
+        }
         function goPage(p) { if (p === '...') return; currentPage.value = p; fetchNews(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        function goHome() { currentCategoryId.value = 0; currentPage.value = 1; fetchNews(); }
+        function goHome() { currentCategoryId.value = 0; currentPage.value = 1; searchMode.value = false; history.replaceState(null, '', 'index.html'); fetchNews(); }
         function goDetail(id) { window.location.href = 'detail.html?id=' + id; }
         function goFavorites() { window.location.href = 'favorites.html'; }
         function goHistory() { window.location.href = 'history.html'; }
@@ -515,18 +536,17 @@
           if (!q && !searchStartDate.value && !searchEndDate.value) {
             showToast('请输入关键词或选择日期范围', 'error'); return;
           }
-          const params = new URLSearchParams();
-          if (q) params.set('q', q);
-          if (searchStartDate.value) params.set('startDate', searchStartDate.value);
-          if (searchEndDate.value) params.set('endDate', searchEndDate.value);
-          if (currentCategoryId.value) params.set('categoryId', currentCategoryId.value);
-          window.location.href = 'search.html?' + params.toString();
+          searchMode.value = true;
+          currentPage.value = 1;
+          fetchNews();
         }
         function resetSearch() {
+          searchMode.value = false;
           searchQuery.value = '';
           searchStartDate.value = '';
           searchEndDate.value = '';
-          showSearch.value = false;
+          currentPage.value = 1;
+          fetchNews();
         }
 
         // --- Auth ---
@@ -559,7 +579,7 @@
 
         async function handleRegister() {
           if (!registerForm.value.email || !registerForm.value.password || !registerForm.value.code) { showToast('请填写完整信息', 'error'); return; }
-          if (calcPwdScore(registerForm.value.password) < 5) { showToast('密码强度不足，请按照提示设置密码', 'error'); return; }
+          if (calcPwdScore(registerForm.value.password) < 4) { showToast('密码强度不足，请按照提示设置密码', 'error'); return; }
           authLoading.value = true;
           try {
             await UserAPI.register(registerForm.value);
@@ -573,7 +593,7 @@
 
         async function handleResetPwd() {
           if (!resetForm.value.email || !resetForm.value.newPwd || !resetForm.value.code) { showToast('请填写完整', 'error'); return; }
-          if (calcPwdScore(resetForm.value.newPwd) < 5) { showToast('新密码强度不足', 'error'); return; }
+          if (calcPwdScore(resetForm.value.newPwd) < 4) { showToast('新密码强度不足', 'error'); return; }
           authLoading.value = true;
           try {
             await UserAPI.resetPwd({ email: resetForm.value.email, code: resetForm.value.code, newPwd: resetForm.value.newPwd });
@@ -669,7 +689,7 @@
         async function handleUpdatePwd() {
           if (!pwdForm.value.cur_pwd || !pwdForm.value.new_pwd) { showToast('请填写完整', 'error'); return; }
           if (pwdForm.value.cur_pwd === pwdForm.value.new_pwd) { showToast('新密码不能与当前密码相同', 'error'); return; }
-          if (calcPwdScore(pwdForm.value.new_pwd) < 5) { showToast('新密码强度不足', 'error'); return; }
+          if (calcPwdScore(pwdForm.value.new_pwd) < 4) { showToast('新密码强度不足', 'error'); return; }
           pwdSaving.value = true;
           try {
             await UserAPI.updatePwd(pwdForm.value);
@@ -693,6 +713,9 @@
 
         // --- Init ---
         onMounted(async () => {
+          const params = new URLSearchParams(window.location.search);
+          const cid = parseInt(params.get('categoryId')) || 0;
+          if (cid) currentCategoryId.value = cid;
           if (window.isLoggedIn()) await loadUser();
           await fetchCategories();
           await fetchNews();
@@ -700,12 +723,12 @@
 
         return {
           categories, newsList, total, currentPage, currentCategoryId, loading, showSearch,
-          searchQuery, searchStartDate, searchEndDate,
+          searchMode, searchQuery, searchStartDate, searchEndDate,
           loggedIn, user,
           showAuthModal, authMode, showResetModal, authLoading, codeCountdown,
           loginForm, loginPwdVisible,
-          registerForm, regPwdVisible, regPwdScore,
-          resetForm, resetPwdVisible, resetPwdScore,
+          registerForm, regPwdVisible, regPwdBlurred, regPwdScore,
+          resetForm, resetPwdVisible, resetPwdBlurred, resetPwdScore,
           showProfileModal, profileTab, profileForm, avatarFile, profileSaving,
           pwdForm, profileCurPwdVisible, profileNewPwdVisible, profilePwdScore, pwdSameError, pwdSaving,
           confirmDeleteAccount, deletingAccount, favCount, histCount,

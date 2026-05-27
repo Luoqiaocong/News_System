@@ -1,12 +1,10 @@
 from typing import Annotated, Optional
 from jose import JWTError, jwt
-from fastapi import Depends, status
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from Exception import UserException, ResponseCode
 from Repo.UserRepo import UserRepo
-from Config.DataBaseConfig import get_db
 from Config.settings import settings
 from Utils.HashUtil import get_real_id
 from models.User import User

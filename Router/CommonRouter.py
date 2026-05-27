@@ -6,7 +6,6 @@ from starlette import status
 from Route.UnifiedRoute import UnifiedRoute
 from Schemas.CommonSchema import VerifyEmail
 from Service.CommonService import CommonService
-from Utils.ResponseUtil import success_response
 
 router = APIRouter(prefix="/api/common",tags=['通用接口'], route_class=UnifiedRoute)
 

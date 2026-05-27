@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import UserException, ResponseCode, BaseBusinessException
 from Repo import UserRepo
-from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserInfo, UserProfileUpdate, \
+from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserProfileUpdate, \
     UserPwdAuth, UserPwdResetAuth
 from Utils import SecurityUtil
 from Utils.LogUtil import log

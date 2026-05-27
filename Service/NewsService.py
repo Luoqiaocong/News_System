@@ -1,10 +1,7 @@
-from datetime import datetime
-import functools
 import json
-import logging
 from contextlib import asynccontextmanager
-from typing import Annotated, Callable, Optional, Type, Tuple
-from fastapi import HTTPException, Depends, Query
+from typing import Annotated, Optional
+from fastapi import Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from Config.DataBaseConfig import get_db
 from Exception import NewsException, ResponseCode
@@ -14,7 +11,6 @@ from Schemas.UserSchema import UserInfo
 from Utils.ServiceDecorator import handle_service_exception
 from Utils.RedisUtil import redis_cache_decorator
 from Utils.LogUtil import log
-from models.UserNewsHistory import UserNewsHistory
 
 
 class NewsService:
