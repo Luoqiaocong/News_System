@@ -1,29 +1,23 @@
 import re
-import asyncio
-import bcrypt
 
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 from Exception import UserException, ResponseCode
 
 
-class AsyncPasswordManager:
-    def __init__(self, rounds: int = 10):
-        self._rounds = rounds
+class PasswordManager:
+    _ph = PasswordHasher()
 
-    async def hash(self, password: str) -> str:
-        def _hash():
-            return bcrypt.hashpw(
-                password.encode('utf-8'),
-                bcrypt.gensalt(self._rounds)
-            )
-        return (await asyncio.to_thread(_hash)).decode('utf-8')
+    @classmethod
+    def hash(cls, password: str) -> str:
+        return cls._ph.hash(password)
 
-    async def verify(self, plain: str, hashed: str) -> bool:
-        def _verify():
-            return bcrypt.checkpw(plain.encode('utf-8')[:72], hashed.encode('utf-8'))
-        return await asyncio.to_thread(_verify)
-
-
-pwd_manager = AsyncPasswordManager()
+    @classmethod
+    def verify(cls, plain_password: str, hashed_password: str) -> bool:
+        try:
+            return cls._ph.verify(hashed_password, plain_password)
+        except VerifyMismatchError:
+            return False
 
 
 def validate_password_strength(password: str):

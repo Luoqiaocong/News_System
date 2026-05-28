@@ -1,13 +1,12 @@
 from typing import Any
-from fastapi import  Depends
-from sqlalchemy import  update, delete
+from fastapi import Depends
+from sqlalchemy import update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from Config.DataBaseConfig import get_db
 from Schemas.UserSchema import UserRequest
 from models.User import User
-from Utils.SecurityUtil import pwd_manager
-from sqlalchemy import select
+from Utils.SecurityUtil import PasswordManager
 
 
 class UserRepo:
@@ -28,7 +27,7 @@ class UserRepo:
     async def create(self, userdata: UserRequest):
         user = User(email=userdata.email, password=userdata.password)
         self.db.add(user)
-        await self.db.flush()  # 不作提交
+        await self.db.flush()
 
     async def login(self, userdata: UserRequest):
         stmt = select(User).where(User.email == userdata.email)
@@ -38,7 +37,7 @@ class UserRepo:
         if not user:
             return None
 
-        if not await pwd_manager.verify(userdata.password, user.password):
+        if not PasswordManager.verify(userdata.password, user.password):
             return None
 
         return user
@@ -73,7 +72,7 @@ class UserRepo:
         await self.db.flush()
         return row.rowcount > 0 # type: ignore
 
-    async def change_password(self, new_pwd:str, user: User):
-        user.password = await pwd_manager.hash(new_pwd) # type: ignore
+    async def change_password(self, new_pwd: str, user: User):
+        user.password = PasswordManager.hash(new_pwd)
         await self.db.flush()
 

@@ -18,7 +18,7 @@ from Utils.FileUtil import upload_file
 from models.User import User
 from Utils.RedisUtil import redis_client
 from Utils.TransactionMixin import TransactionMixin
-from Utils.SecurityUtil import pwd_manager
+from Utils.SecurityUtil import PasswordManager
 
 def transactional(
     func: Callable[..., Coroutine[Any, Any, Any]]
@@ -62,14 +62,13 @@ class UserService(TransactionMixin):
         if existing_user:
             raise UserException(code=ResponseCode.USER_EXIST)
 
-        # 密码强度校验（先校验密码，避免消耗验证码后因密码弱而失败）
+        # 密码强度校验
         SecurityUtil.validate_password_strength(userdata.password)
 
         # 验证码校验
         await self._verify_code(userdata.email, userdata.code)
 
-        hashed_password = await pwd_manager.hash(userdata.password)
-        userdata.password = hashed_password
+        userdata.password = PasswordManager.hash(userdata.password)
 
         await self.repo.create(userdata)
 
@@ -133,7 +132,7 @@ class UserService(TransactionMixin):
     async def update_user_password(self, pwd_data: UserPwdAuth, user: User):
         log.info(f"{user.email}请求修改密码")
 
-        if not await pwd_manager.verify(pwd_data.cur_pwd, user.password):
+        if not PasswordManager.verify(pwd_data.cur_pwd, user.password):
             raise UserException(code=ResponseCode.USER_PWD_AUTH_FAILED)
 
         if pwd_data.cur_pwd == pwd_data.new_pwd:

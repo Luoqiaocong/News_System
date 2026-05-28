@@ -12,7 +12,7 @@ class UserIdentity(BaseModel):
 
 class UserRequest(BaseModel):
     email: Annotated[EmailStr, Field(description="邮箱地址")]
-    password: Annotated[str, Field(description="密码", min_length=8)]  # 密码以后要进行复杂化校验
+    password: Annotated[str, Field(description="密码", min_length=8)]
 
 
 class RegisterUserRequest(UserRequest):
@@ -43,7 +43,6 @@ class UserInfo(UserIdentity, UserProfileBase):
 
 class UserToken(BaseModel):
     token: Annotated[str, Field(description="登录凭证")] = None
-    # userInfo: Annotated[UserInfo ,Field(..., alias="userInfo")]=None
 
     model_config = {
         "from_attributes": True,
@@ -52,8 +51,8 @@ class UserToken(BaseModel):
 
 
 class UserPwdAuth(BaseModel):
-    cur_pwd: Annotated[str, Field(description="现密码",min_length=8)]
-    new_pwd: Annotated[str, Field(description="新密码",min_length=8)]
+    cur_pwd: Annotated[str, Field(description="现密码", min_length=8)]
+    new_pwd: Annotated[str, Field(description="新密码", min_length=8)]
 
     model_config = {
         "from_attributes": True,
@@ -61,6 +60,6 @@ class UserPwdAuth(BaseModel):
 
 
 class UserPwdResetAuth(BaseModel):
-    email: Annotated[EmailStr,Field(description="邮箱地址")]
+    email: Annotated[EmailStr, Field(description="邮箱地址")]
     code: Annotated[str, Field(description="验证码")]
-    new_pwd: Annotated[str, Field(description="新密码",min_length=8,alias="newPwd")]
+    new_pwd: Annotated[str, Field(description="新密码", min_length=8, alias="newPwd")]
