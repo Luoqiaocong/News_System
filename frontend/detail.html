@@ -76,6 +76,13 @@
         <div style="font-size:16px;line-height:2;color:var(--gray-700);word-break:break-word"
           v-html="detail.content"></div>
 
+        <div class="share-bar">
+          <span class="share-label">分享到</span>
+          <button class="share-btn" @click="copyLink" title="复制链接">📋</button>
+          <button class="share-btn" @click="shareWeibo" title="分享到微博">🌐</button>
+          <button class="share-btn" @click="shareMore" title="更多分享">🔗</button>
+        </div>
+
       </article>
 
       <!-- Related News -->
@@ -177,6 +184,30 @@
           }
         }
 
+        // --- Share ---
+        function copyLink() {
+          const url = window.location.href;
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => showToast('链接已复制'));
+          } else {
+            showToast('复制失败，请手动复制浏览器地址栏', 'error');
+          }
+        }
+        function shareWeibo() {
+          const url = encodeURIComponent(window.location.href);
+          const title = encodeURIComponent(detail.value?.title || '');
+          window.open('https://service.weibo.com/share/share.php?url=' + url + '&title=' + title, '_blank');
+        }
+        function shareMore() {
+          const url = window.location.href;
+          const title = detail.value?.title || '';
+          if (navigator.share) {
+            navigator.share({ title, url }).catch(() => {});
+          } else {
+            copyLink();
+          }
+        }
+
         function goDetail(id) {
           window.location.href = 'detail.html?id=' + id;
         }
@@ -211,7 +242,7 @@
 
         return {
           detail, relatedNews, isFavorited, loading, loggedIn, user, avatarSrc, toast,
-          formatDate, toggleFavorite, goBack, goDetail, toggleDark,
+          formatDate, toggleFavorite, goBack, goDetail, toggleDark, copyLink, shareWeibo, shareMore,
         };
       },
     }).mount('#app');

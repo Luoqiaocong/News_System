@@ -129,6 +129,12 @@
   background: var(--gray-100);
   border-color: var(--gray-200);
 }
+[data-theme="dark"] .card-selected {
+  box-shadow: 0 0 0 2px var(--primary), 0 4px 20px rgba(79, 70, 229, 0.2) !important;
+}
+[data-theme="dark"] .card-selected .news-card-title {
+  color: #818cf8;
+}
 [data-theme="dark"] .data-table th {
   border-bottom-color: var(--gray-200);
 }
@@ -142,6 +148,13 @@
 [data-theme="dark"] .fav-inline {
   background: var(--gray-50);
   border-color: var(--gray-200);
+}
+[data-theme="dark"] .share-btn {
+  background: var(--gray-50);
+  border-color: var(--gray-200);
+}
+[data-theme="dark"] .share-btn:hover {
+  border-color: var(--primary);
 }
 [data-theme="dark"] .modal-overlay {
   background: rgba(0, 0, 0, 0.65);

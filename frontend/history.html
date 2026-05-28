@@ -48,10 +48,11 @@
           <span class="fav-count">{{ total }} 条记录</span>
         </div>
         <div class="fav-hero-actions">
-          <button class="btn btn-outline btn-sm" :class="{ active: selectMode }" @click="toggleSelectMode" v-if="list.length > 0">
-            {{ selectMode ? '退出选择' : '批量管理' }}
+          <button class="btn btn-outline btn-sm batch-btn" :class="{ active: selectMode }" @click="toggleSelectMode" v-if="list.length > 0">
+            {{ selectMode ? '完成' : '批量管理' }}
+            <span class="batch-badge" v-if="selectMode && selectedIds.length">+{{ selectedIds.length }}</span>
           </button>
-          <button class="btn btn-danger btn-sm" @click="clearAll" v-if="list.length > 0">清空全部</button>
+          <button class="btn btn-danger btn-sm" @click="clearAll" v-if="list.length > 0 && !selectMode">清空全部</button>
         </div>
       </div>
 
@@ -70,18 +71,21 @@
 
       <template v-else>
 
-        <div class="select-toolbar" v-if="selectMode">
+        <div class="select-toolbar" :class="{ show: selectMode }" v-if="selectMode">
           <label class="select-all-label">
             <input type="checkbox" :checked="allSelected" @change="toggleAll" />
-            全选 ({{ selectedIds.length }}/{{ list.length }})
+            全选
           </label>
+          <span class="select-count">{{ selectedIds.length }} / {{ list.length }} 已选</span>
           <button class="btn btn-danger btn-sm" @click="batchRemove" :disabled="selectedIds.length === 0">
-            删除选中 ({{ selectedIds.length }})
+            删除选中
           </button>
         </div>
 
         <div class="news-grid">
-          <div class="news-card fav-news-card" v-for="item in list" :key="item.historyId || item.history_id || item.id">
+          <div class="news-card fav-news-card" v-for="item in list" :key="item.historyId || item.history_id || item.id"
+            :class="{ 'card-selected': selectMode && selectedIds.includes(item.id) }"
+            @click="selectMode ? toggleItem(item.id) : goDetail(item.id)">
             <div class="fav-card-check" v-if="selectMode" @click.stop>
               <input type="checkbox" :value="item.id" v-model="selectedIds" class="fav-checkbox" />
             </div>
@@ -183,6 +187,11 @@
           if (allSelected.value) selectedIds.value = [];
           else selectedIds.value = list.value.map(o => o.id);
         }
+        function toggleItem(id) {
+          const idx = selectedIds.value.indexOf(id);
+          if (idx > -1) selectedIds.value.splice(idx, 1);
+          else selectedIds.value.push(id);
+        }
         function toggleSelectMode() { selectMode.value = !selectMode.value; selectedIds.value = []; }
 
         async function removeOne(id) {
@@ -231,7 +240,7 @@
         return {
           loggedIn, user, avatarSrc, list, total, page, loading, selectMode, selectedIds, toast,
           totalPages, allSelected, pageNumbers,
-          showToast, formatDate, fetchList, goPage, toggleAll, toggleSelectMode,
+          showToast, formatDate, fetchList, goPage, toggleAll, toggleItem, toggleSelectMode,
           removeOne, batchRemove, clearAll, goDetail, goHome, toggleDark,
         };
       },

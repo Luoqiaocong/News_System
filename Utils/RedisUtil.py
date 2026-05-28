@@ -62,12 +62,18 @@ class RedisManager:
         data = await self._redis.get(key)
         if not data:
             return None
-        try:
-            parsed = json.loads(data)
-            if isinstance(parsed, (dict, list)):
-                return parsed
+        
+        # 🌟 核心优化：先用 strip() 剔除两端空格，然后判断是否以 { 或 [ 开头
+        # 如果不是，说明它压根就不是字典或列表，连 json.loads 都懒得调，直接原样返回
+        clean_data = data.strip()
+        if not (clean_data.startswith("{") or clean_data.startswith("[")):
             return data
+
+        try:
+            # 能走到这里的，百分之百是准备解析成 dict 或 list 的字符串
+            return json.loads(clean_data)
         except (json.JSONDecodeError, TypeError):
+            # 极少数情况下，虽然以 { 开头但可能是不合法的 JSON（脏数据），防御性返回原字符串
             return data
 
     async def delete(self, *keys: str):

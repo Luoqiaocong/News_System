@@ -708,10 +708,10 @@
           deletingAccount.value = true;
           try {
             await UserAPI.deleteAccount();
-            showToast('账户已注销');
             confirmDeleteAccount.value = false;
             showProfileModal.value = false;
             doLogout();
+            window.location.reload();
           } catch (e) { showToast(e.message, 'error'); }
           finally { deletingAccount.value = false; }
         }

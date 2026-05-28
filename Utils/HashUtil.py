@@ -11,5 +11,5 @@ def get_hashed_id(real_id: int) -> str:
 def get_real_id(hashed_id: str) -> int:
     decoded = hashids.decode(hashed_id)
     if not decoded:
-        raise HTTPException(status_code=400, detail="无效的 ID 格式")
+        raise HTTPException(status_code=400, detail="登录异常，请重新登录")
     return decoded[0]

@@ -7,58 +7,69 @@ from starlette.responses import JSONResponse
 from Exception import ResponseCode
 from Utils.ResponseUtil import success_response
 
-
+# 映射表：将 HTTP 标准状态码映射为符合你项目规范的业务逻辑状态码
 CODE_MAP = {
-    201: ResponseCode.CREATED,  # Created -> 创建成功
-    204: ResponseCode.NO_CONTENT,  # No Content -> 删除成功
-    200: ResponseCode.SUCCESS   # SUCCESS -> 通用成功
+    201: ResponseCode.CREATED,     # 201 Created -> 映射为业务规范中的创建成功码
+    204: ResponseCode.NO_CONTENT,  # 204 No Content -> 映射为业务规范中的删除/空内容成功码
+    200: ResponseCode.SUCCESS      # 200 OK -> 映射为通用成功码
 }
 
 class UnifiedRoute(APIRoute):
     """
     统一响应拦截类：
-    负责拦截所有该路由下的函数返回值，并统一格式化为 {"code": ..., "data": ..., "message": ...}
+    继承自 FastAPI 核心路由组件 APIRoute。
+    负责在业务函数执行完毕、响应返回给前端之前进行拦截，
+    并将散乱的返回值全自动格式化为标准响应体：{"code": ..., "data": ..., "message": ...}
     """
 
     def get_route_handler(self) -> Callable:
-        # 1. 获取 FastAPI 默认的处理器（它负责运行你的 register 函数并处理依赖注入）
+        # 1. 重写父类方法，获取 FastAPI 默认的路由处理器。
+        # 这个处理器非常关键，它底层负责了路由匹配、参数依赖注入（Depends）以及业务函数的安全调用
         original_route_handler = super().get_route_handler()
 
         async def custom_route_handler(request: Request) -> Response:
-            # 2. 运行你的业务函数（比如 register），获取它生成的响应
+            # 2. 真正的拦截核心：在这里安全地等待并运行你的业务函数（如路由里的 async def 函数），
+            # 获取它生成的标准 Response 响应对象
             response = await original_route_handler(request)
 
-            # 3. 检查响应是否属于 JSONResponse 类型
-            # FastAPI 默认会将你的 dict, list, None, {} 等返回值自动转为 JSONResponse
+            # 3. 筛选拦截对象：我们只对 JSON 数据进行拦截包装。
+            # 当你的路由函数返回 dict, list, Pydantic Model 或是 None 时，FastAPI 底层都会自动将其转化为 JSONResponse。
             if isinstance(response, JSONResponse):
 
-                # 获取接口定义时指定的 HTTP 状态码（比如 @router.post(status_code=201)）
+                # 🌟 [关键优势]：获取接口在装饰器里定义时指定的 HTTP 状态码。
+                # 例如：@router.post("/news", status_code=201)，这里就能拿到 201
                 http_status = response.status_code
 
-                # 从映射表取业务 code，取不到则用默认 10000
+                # 依据映射表，将 HTTP 状态码转化为对应的内部业务 Code（如果未映射，则默认为通用成功 SUCCESS）
                 business_code = CODE_MAP.get(http_status, ResponseCode.SUCCESS)
-                # 4. 解析响应体中的原始字节数据
-                # 如果你的函数返回 None，这里解析出来就是 b'null'
-                body_content = response.body.decode()
+                
+                # 4. 提取原始响应体内容：
+                # response.body 拿到的是二进制字节数据（如 b'{"id": 1}' 或 b'null'）
+                body_content = response.body.decode() # type: ignore
 
-                # 将字节转为 Python 对象 (dict, list, 或 None)
+                # 将字节字符串反序列化为 Python 的原生数据对象 (dict, list, 或 None)
                 try:
                     data = json.loads(body_content) if body_content else None
                 except json.JSONDecodeError:
-                    # 如果解析失败（例如不是 JSON），则原样返回不进行包装
+                    # 💡 【防御性编程】：如果响应体由于特殊原因无法被反序列化（例如强行返回了非标准文本），
+                    # 则不强制包装，直接原样放行，防止系统抛出 500 崩溃异常。
                     return response
 
-                # 5. 判断是否需要包装
-                # 情况 A: 数据是 None (比如你的 register 函数没写 return)
-                # 情况 B: 数据是 dict 但里面没有 "code" (说明没被手动包装过)
-                # 情况 C: 数据是 list (比如返回用户列表)
+                # 5. 核心判断区：决定这个数据是否需要被“包一层壳”
+                # 满足以下三大条件之一的，说明数据尚未被统一格式化，需要包装：
+                # 情况 A: data is None (即业务接口没有写 return，或者返回了 None)
+                # 情况 B: 数据是个字典，但是里面没有 "code" 键 (说明是普通的业务数据字典，不是手动包装过的对象)
+                # 情况 C: 数据是个纯列表 list (例如返回新闻卡片列表：[{"id": 1}, {"id": 2}])
                 if data is None or not (isinstance(data, dict) and "code" in data):
-                    # 6. 调用你的工具函数 success_response 进行包装
-                    # 如果 data 为 None，包装后会变成 {"code": 10000, "message": "成功", "data": null}
-                    return success_response(data=data,success_code=business_code)
+                    
+                    # 6. 调用统一成功包装工具函数：
+                    # 将剥离出来的 data 重新组装，并带入刚刚根据 HTTP 状态码推导出来的业务代码（business_code）。
+                    # success_response 内部会将其重新打包成一个全新的 JSONResponse 并返回。
+                    return success_response(data=data, success_code=business_code)
 
-            # 7. 如果是其他类型的响应（如二进制流、HTML 等），直接原样返回，不做干预
+            # 7. 纯流式/静态放行：如果响应对象属于 HTMLResponse、StreamingResponse（下载文件）等，
+            # 或者是已经被手动包装好的响应，则直接原样返回，不进行任何额外干预。
             return response
 
-        # 返回这个增强后的处理器给 FastAPI 框架使用
+        # 将这个我们亲手打造的、具备“自动打包功能”的增强型处理器返回给 FastAPI 框架，替代官方默认行为
         return custom_route_handler

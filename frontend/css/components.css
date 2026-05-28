@@ -591,6 +591,39 @@
   border-color: rgba(249, 115, 22, 0.3);
 }
 
+/* ==================== Share Bar ==================== */
+.share-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0 8px;
+  margin-top: 28px;
+  border-top: 1px solid var(--gray-200);
+}
+.share-label {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-right: 4px;
+}
+.share-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--gray-200);
+  border-radius: 50%;
+  background: var(--white);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+.share-btn:hover {
+  border-color: var(--primary);
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
+}
+
 /* ==================== Select Toolbar ==================== */
 .select-toolbar {
   display: flex;
@@ -601,6 +634,11 @@
   border: 1px solid var(--gray-200);
   border-radius: 12px;
   margin-bottom: 16px;
+  animation: toolbarSlideIn 0.25s ease;
+}
+@keyframes toolbarSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .select-all-label {
   display: flex;
@@ -609,6 +647,47 @@
   font-size: 13px;
   color: var(--gray-500);
   cursor: pointer;
+}
+.select-count {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+/* Batch Button */
+.batch-btn {
+  position: relative;
+}
+.batch-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  animation: badgePop 0.3s ease;
+}
+@keyframes badgePop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Selected Card */
+.card-selected {
+  box-shadow: 0 0 0 2px var(--primary), var(--shadow-md) !important;
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.02), rgba(6, 182, 212, 0.02));
+}
+.card-selected .news-card-title {
+  color: var(--primary);
 }
 .table-toolbar {
   padding: 10px 14px;

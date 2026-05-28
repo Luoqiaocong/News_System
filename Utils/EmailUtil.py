@@ -13,8 +13,8 @@ class EmailHelper:
         message = EmailMessage()
         message["From"] = settings.SENDER
         message["To"] = receiver
-        message["Subject"] = "【Seven新闻】Verify Code"
-        message.set_content(f"【Seven新闻】您的验证码是：{code}，用于新闻系统身份验证，3分钟内有效，请勿泄露和转发，如非本人操作，请忽略此邮件。")
+        message["Subject"] = "【Seven News】Verify Code"
+        message.set_content(f"【Seven News】您的验证码是：{code}，用于新闻系统身份验证，3分钟内有效，请勿泄露和转发，如非本人操作，请忽略此邮件。")
 
         try:
             await aiosmtplib.send(

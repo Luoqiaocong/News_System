@@ -19,8 +19,8 @@ class ResponseCode(Enum):
 
     # ========== 通用成功状态 ==========
     SUCCESS = (20000, "ok")
-    CREATED = (20100, "创建成功")
-    NO_CONTENT = (20400, "删除成功")
+    CREATED = (20100, "操作成功")
+    NO_CONTENT = (20400, "操作成功")
 
     # ========== 通用错误 (1xxxx) ==========
     PARAM_ERROR = (10001, "参数错误")
