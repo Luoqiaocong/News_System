@@ -7,7 +7,7 @@ from Exception import NewsException, ResponseCode
 from Repo import NewsRepo, NewsCacheRepo, UserHistRepo
 from Schemas.NewsSchema import CategoryData, NewsData, NewsDetailResponse, NewsListResponse, NewsListCard, RelatedNewsCard
 from models.User import User
-from Utils.ServiceDecorator import handle_service_exception
+from Utils.ServiceDecorator import HandlerServiceException
 from Utils.RedisUtil import redis_cache_decorator
 from Utils.TransactionMixin import TransactionMixin
 
@@ -34,7 +34,7 @@ class NewsService(TransactionMixin):
 
         return [CategoryData.model_validate(cat) for cat in categories_orm]
 
-    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
+    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_list(self,category_id: int, page: int, page_size: int)->NewsListResponse:
         start = (page - 1) * page_size
         end = start + page_size - 1
@@ -56,7 +56,7 @@ class NewsService(TransactionMixin):
 
         raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
 
-    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
+    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_detail(self, news_id:int):
         # ====== 1. 新闻详情（先缓存，后 DB）======
         detail_dict = await NewsCacheRepo.get_detail_cache(news_id)
@@ -87,7 +87,7 @@ class NewsService(TransactionMixin):
         return NewsDetailResponse(detail=NewsData.model_validate(detail_dict),related_news=[RelatedNewsCard.model_validate(r) for r in related])
     
 
-    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
+    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def handle_news_view(
             self,
             news_id: int,
@@ -116,7 +116,7 @@ class NewsService(TransactionMixin):
                 if not is_add:
                     await self.histrepo.add_hist(news_id, user.id)  # 新增调用 add_hist方法，确保记录存在
 
-    @handle_service_exception(pass_through_exceptions=(NewsException,)) # 捕获 NewsException，其他异常交由全局异常处理器
+    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def search_news(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str], page: int, pagesize: int):
         
         offset = (page - 1) * pagesize

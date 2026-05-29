@@ -122,7 +122,7 @@ def redis_cache_decorator(
     """
 
     def decorator(func: Callable):
-        @functools.wraps(func)
+        @functools.wraps(func)   # 为了保持原函数的元信息（如 __name__ 和 __doc__）
         async def wrapper(*args, **kwargs):
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
