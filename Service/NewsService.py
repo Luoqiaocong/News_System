@@ -2,7 +2,7 @@ import json
 from typing import Annotated, Optional
 from fastapi import Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from Config.DataBaseConfig import get_db
+from Config.DataBaseConfig import AsyncSessionLocal, get_db
 from Exception import NewsException, ResponseCode
 from Repo import NewsRepo, NewsCacheRepo, UserHistRepo
 from Schemas.NewsSchema import CategoryData, NewsData, NewsDetailResponse, NewsListResponse, NewsListCard, RelatedNewsCard
@@ -91,12 +91,13 @@ class NewsService(TransactionMixin):
     async def handle_news_view(
             self,
             news_id: int,
-            user: User
+            user_id: Optional[int]
     ):
         """
         统一处理浏览逻辑：
         1. 增加浏览量 (核心逻辑)
-        2. 如果有 user_id，记录历史 (附属逻辑)
+        2. 记录历史 (附属逻辑)
+
         """
         # --- 1. 更新浏览量 (核心) ---
         success = await  self.repo.update_views(news_id)
@@ -111,10 +112,10 @@ class NewsService(TransactionMixin):
 
         async with self.transaction_scope():
             # --- 2. 记录历史 (附属) ---
-            if user and user.id:
-                is_add = await self.histrepo.add_view(news_id, user.id)
+            if user_id:
+                is_add = await self.histrepo.add_view(news_id, user_id)
                 if not is_add:
-                    await self.histrepo.add_hist(news_id, user.id)  # 新增调用 add_hist方法，确保记录存在
+                    await self.histrepo.add_hist(news_id, user_id)  # 新增调用 add_hist方法，确保记录存在
 
     @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def search_news(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str], page: int, pagesize: int):

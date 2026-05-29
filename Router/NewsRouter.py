@@ -41,8 +41,11 @@ class NewsRouterAPI:
           
     ):
         result = await self.service.get_news_detail(news_id)
-        background_tasks.add_task(self.service.handle_news_view, news_id, self.current_user)
-        return success_response(data=result)
+        user_id = self.current_user.id if self.current_user else None
+        # 这里传user_id而不是整个user对象，是为了避免在后台任务中使用过期的数据库会话（session），导致潜在的生命周期问题。
+        background_tasks.add_task(self.service.handle_news_view, news_id, user_id)
+        '''这里有踩坑点，详情见  --->  《fastapi注意事项.md》--3.关于后台任务与db生命周期'''
+        return result
     
     @router.get("/search", summary="搜索新闻")
     async def search_news(self,

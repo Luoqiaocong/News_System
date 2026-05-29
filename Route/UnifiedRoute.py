@@ -65,8 +65,21 @@ class UnifiedRoute(APIRoute):
                     # 6. 调用统一成功包装工具函数：
                     # 将剥离出来的 data 重新组装，并带入刚刚根据 HTTP 状态码推导出来的业务代码（business_code）。
                     # success_response 内部会将其重新打包成一个全新的 JSONResponse 并返回。
-                    return success_response(data=data, success_code=business_code)
 
+                    # 1. 现场生成新 Response 壳
+                    new_response = success_response(data=data, success_code=business_code)
+    
+                    # 2. 🌟 灵魂移植 A：把原来路由挂载的后台任务（BackgroundTask）原封不动拷贝过来
+                    new_response.background = response.background 
+                    
+                    # 3. 🌟 灵魂移植 B：把原响应的 HTTP 状态码和头信息也继承过来（防止丢掉跨域或自定义 Header）
+                    new_response.status_code = response.status_code
+                    # 排除掉原本的 Content-Length，因为重新打包后响应体大小变了，让新 Response 重新计算
+                    for key, value in response.headers.items():
+                        if key.lower() != "content-length":
+                            new_response.headers[key] = value
+                            
+                    return new_response
             # 7. 纯流式/静态放行：如果响应对象属于 HTMLResponse、StreamingResponse（下载文件）等，
             # 或者是已经被手动包装好的响应，则直接原样返回，不进行任何额外干预。
             return response

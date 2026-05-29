@@ -1,4 +1,4 @@
-from fastapi import UploadFile, APIRouter
+from fastapi import Response, UploadFile, APIRouter
 
 from Config.AliyunOssConfig import settings, bucket
 
@@ -22,3 +22,6 @@ async def upload_file(file: UploadFile):
         "url": f"https://{settings.OSS_BUCKET_NAME}.{settings.OSS_ENDPOINT}/{filename}",
         "http_status": result.status
     }
+
+
+Response
