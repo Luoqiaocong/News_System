@@ -3,14 +3,23 @@ const API_BASE = 'http://localhost:8000';
 
 // ==================== Token Management ====================
 function getToken() {
-  return localStorage.getItem('token');
+  return localStorage.getItem('access_token');
 }
 
-function setToken(token) {
-  if (token) {
-    localStorage.setItem('token', token);
+function getRefreshToken() {
+  return localStorage.getItem('refresh_token');
+}
+
+function setTokens(accessToken, refreshToken) {
+  if (accessToken) {
+    localStorage.setItem('access_token', accessToken);
   } else {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+  }
+  if (refreshToken) {
+    localStorage.setItem('refresh_token', refreshToken);
+  } else {
+    localStorage.removeItem('refresh_token');
   }
 }
 
@@ -19,8 +28,50 @@ function isLoggedIn() {
 }
 
 function logout() {
-  localStorage.removeItem('token');
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
+}
+
+function parseJwtSub(token) {
+  try {
+    var payload = token.split('.')[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    return JSON.parse(atob(payload)).sub;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function refreshAccessToken() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) throw new Error('No refresh token');
+
+  const token = getToken();
+  let userId = parseJwtSub(token);
+  if (!userId) {
+    try { userId = JSON.parse(localStorage.getItem('user') || '{}').id; } catch (e) {}
+  }
+  if (!userId) throw new Error('缺少用户信息，请重新登录');
+
+  const res = await fetch(API_BASE + '/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, refresh_token: refreshToken }),
+  });
+  const data = await res.json();
+
+  if (data.code !== 20000) {
+    throw new Error(data.message || '刷新失败');
+  }
+
+  const result = data.data;
+  if (result && result.access_token) {
+    localStorage.setItem('access_token', result.access_token);
+    return result.access_token;
+  }
+  throw new Error('刷新失败');
 }
 
 // ==================== Cache-busted avatar helper ====================
@@ -47,12 +98,38 @@ async function request(url, options = {}) {
     headers['Authorization'] = 'Bearer ' + token;
   }
 
-  const res = await fetch(API_BASE + url, {
+  let res = await fetch(API_BASE + url, {
     ...options,
     headers,
   });
 
-  const data = await res.json();
+  let data = await res.json();
+
+  // Token invalid (10103) — 直接登出，不刷新
+  if (data.code === 10103) {
+    logout();
+    window.location.href = 'index.html';
+    throw new Error('登录已失效，请重新登录');
+  }
+
+  // Auto-refresh: token expired (10102) or missing (401)
+  const shouldRefresh = getRefreshToken() && (
+    data.code === 10102 ||
+    (!res.ok && res.status === 401)
+  );
+
+  if (shouldRefresh) {
+    try {
+      const newToken = await refreshAccessToken();
+      headers['Authorization'] = 'Bearer ' + newToken;
+      res = await fetch(API_BASE + url, { ...options, headers });
+      data = await res.json();
+    } catch (e) {
+      logout();
+      window.location.href = 'index.html';
+      throw new Error('登录已过期，请重新登录');
+    }
+  }
 
   if (!res.ok || (data.code && data.code !== 20000 && data.code !== 0 && data.code !== 20100)) {
     const message = data.message || data.detail || '请求失败';
@@ -111,7 +188,21 @@ const UserAPI = {
   deleteAccount() {
     return request('/api/user/delete', { method: 'DELETE' });
   },
+  logout(refreshToken) {
+    return request('/api/user/logout', { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) });
+  },
 };
+
+async function loadUserData() {
+  try {
+    const userData = await UserAPI.getInfo();
+    localStorage.setItem('user', JSON.stringify(userData));
+    return userData;
+  } catch (e) {
+    setTokens(null, null);
+    return null;
+  }
+}
 
 // ==================== Favorite APIs ====================
 const FavAPI = {
@@ -175,6 +266,6 @@ function initTheme() {
 // ==================== Common APIs ====================
 const CommonAPI = {
   sendCode(email) {
-    return request('/api/common/sendCode', { method: 'POST', body: JSON.stringify({ email }) });
+    return request('/api/auth/sendCode', { method: 'POST', body: JSON.stringify({ email }) });
   },
 };

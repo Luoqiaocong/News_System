@@ -63,3 +63,6 @@ class UserPwdResetAuth(BaseModel):
     email: Annotated[EmailStr, Field(description="邮箱地址")]
     code: Annotated[str, Field(description="验证码")]
     new_pwd: Annotated[str, Field(description="新密码", min_length=8, alias="newPwd")]
+
+class LogoutRequest(BaseModel):
+    refresh_token: str

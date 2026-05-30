@@ -33,14 +33,7 @@ class UserRepo:
         stmt = select(User).where(User.email == userdata.email)
         result = await self.db.execute(stmt)
         user = result.scalar_one_or_none()
-
-        if not user:
-            return None
-
-        if not PasswordManager.verify(userdata.password, user.password):
-            return None
-
-        return user
+        return user if user is not None else None
 
     async def set_token(self, user_id: int, token: str):
         # 无论之前是否有token，都换成新token

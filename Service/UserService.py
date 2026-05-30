@@ -1,10 +1,12 @@
 from functools import wraps
+import hashlib
 from typing import Annotated, Any, Callable, Coroutine
 
 from fastapi import Depends
 from pydantic import HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from Config.settings import settings
 from Config.DataBaseConfig import get_db
 from Exception import UserException, ResponseCode
 from Repo import UserRepo
@@ -12,26 +14,19 @@ from Schemas.UserSchema import RegisterUserRequest, LoginUserRequest, UserProfil
     UserPwdAuth, UserPwdResetAuth
 from Utils import SecurityUtil
 from Utils.LogUtil import log
-from Utils.JWTUtil import create_access_token
+from Utils.AuthUtil import _manage_device_slots, create_access_token, create_refresh_token
 from Utils.HashUtil import get_hashed_id
 from Utils.FileUtil import upload_file
 from models.User import User
 from Utils.RedisUtil import redis_client
-from Utils.TransactionMixin import TransactionMixin
+from Utils.TransactionMixin import TransactionMixin, transactional
 from Utils.SecurityUtil import PasswordManager
 
-def transactional(
-    func: Callable[..., Coroutine[Any, Any, Any]]
-) -> Callable[..., Coroutine[Any, Any, Any]]:
-    @wraps(func)
-    async def wrapper(self: "UserService", *args: Any, **kwargs: Any) -> Any:
-        async with self.transaction_scope():
-            return await func(self, *args, **kwargs)
-    return wrapper
+
 
 
 class UserService(TransactionMixin):
-    _business_exception_type = UserException
+    _business_exception_type = UserException  # 注册为用户异常
 
     # 注入Repo和db，db是为了得在service层进行事务控制
     def __init__(
@@ -50,15 +45,14 @@ class UserService(TransactionMixin):
 
     async def _verify_code(self, email: str, code: str) -> None:
         key = f"user:verifyCode:{email}"
-        stored_code = await redis_client._redis.get(key)
+        stored_code = await redis_client.get(key)
         if stored_code != code:
             log.error(f"验证码不匹配，期望: {repr(stored_code)}, 收到: {repr(code)}")
             raise UserException(code=ResponseCode.CODE_VERIFY_FAILED)
-        await redis_client.delete(key)
+        await redis_client.delete(key)  # 验证码一次性使用，验证成功后立即删除
 
-    @transactional
     async def create_user(self, userdata: RegisterUserRequest):
-        existing_user = await self.repo.get_user_dynamic(email=userdata.email)
+        existing_user = await self.repo.get_user_dynamic(email=userdata.email)  # 先查数据库，确保邮箱唯一
         if existing_user:
             raise UserException(code=ResponseCode.USER_EXIST)
 
@@ -68,28 +62,49 @@ class UserService(TransactionMixin):
         # 验证码校验
         await self._verify_code(userdata.email, userdata.code)
 
-        userdata.password = PasswordManager.hash(userdata.password)
+        userdata.password = PasswordManager.hash(userdata.password)  # 密码哈希处理
 
-        await self.repo.create(userdata)
+        async with self.transaction_scope():  # 开启事务，确保用户创建和后续操作的原子性
+            await self.repo.create(userdata)
 
-    @transactional
     async def login_user(self, userdata: LoginUserRequest):
         user = await self.repo.login(userdata)
-        if not user:
-            raise UserException(code=ResponseCode.USER_PASSWORD_ERROR)
 
-        new_token = create_access_token({"sub": get_hashed_id(user.id)})
-        '''
-        事实上jwt是无状态的，可以不存数据库，但是如果要实现黑名单，就得使用Redis；
-        现在是为了调试，因为我客户端还没做
-        如果需要存进Redis，也直接改repo层即可（但目前我觉得我这个系统可以不做）
+        if user is None or not PasswordManager.verify(userdata.password, user.password):
+            raise UserException(code=ResponseCode.USER_LOGIN_FAILED)
 
-        但是以后就使用无状态的jwt吗？这个不确定，可能得加自定义逻辑
-        '''
-        await self.repo.set_token(user.id, new_token)
-        return new_token
+        access_token = create_access_token({"sub": get_hashed_id(user.id)})
 
-    @transactional
+        refresh_token = create_refresh_token()
+        
+        # 多设备 3 槽位并发剪裁控制
+        await _manage_device_slots(user.id, refresh_token)
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+    
+    async def logout_user(self, user_id: int, refresh_token: str):
+        """用户主动退出登录：抹杀 Token，并拉入黑名单防重放"""
+        rt_md5 = hashlib.md5(refresh_token.encode()).hexdigest()
+        
+        redis_list_key = f"user:refresh_tokens:{user_id}"  # 如果是ZSET就是 user:refresh_zset:{user_id}
+        blacklist_key = f"token:blacklist:{rt_md5}"
+        
+        # 黑名单寿命：完美覆盖 AccessToken 的存活期（15分钟 + 5分钟容错）
+        safe_blacklist_ttl = (settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60) + 300 
+        
+        async with redis_client.pipeline() as pipe:
+            # 1. 🌟 从活跃设备列表中彻底剔除这台设备的 RefreshToken（剥夺继承权）
+            pipe.lrem(redis_list_key, 0, rt_md5)  # 如果用的是 ZSET，这里改用 pipe.zrem(redis_list_key, rt_md5)
+            
+            # 2. 🌟 扔进黑名单，防止黑客用可能还没到期的旧 AccessToken 被前端 refresh 接口复活
+            pipe.setex(blacklist_key, safe_blacklist_ttl, "logout")
+            
+            await pipe.execute()
+    
     async def delete_user(self, user_email: str):
         user = await self._get_user(email=user_email)
         '''
@@ -97,13 +112,13 @@ class UserService(TransactionMixin):
         所以得使用软删除，具体就是在数据库表中加入is_delete（置为True）、delete_time字段
         自动扫描数据库（FastAPI有这样的操作），当is_delete为True，delete_time时间也到了，那么就彻底删啦！
         '''
-        is_delete = await self.repo.delete(user.id)
+        async with self.transaction_scope():
+            is_delete = await self.repo.delete(user.id)
         if not is_delete:
             log.error(f"'{user.email}'注销账户失败")
             raise UserException(code=ResponseCode.DATABASE_ERROR, msg="注销账户失败")
         log.info(f"'{user.email}'注销账户成功")
 
-    @transactional
     async def update_user(self, user_update_info: dict[str, Any]):
         # 头像上传处理
         avatar_file, user_avatar = user_update_info['avatar'][0], user_update_info['avatar'][1]
@@ -119,16 +134,15 @@ class UserService(TransactionMixin):
             avatar=HttpUrl(avatar_url) if avatar_url else user_avatar
         )
 
-        updated_user = await self.repo.update(
-            user_update_info['email'],
-            user_update_data.model_dump(exclude_none=True, exclude_unset=True)
-        )
+        async with self.transaction_scope():
+            updated_user = await self.repo.update(
+                user_update_info['email'],
+                user_update_data.model_dump(exclude_none=True, exclude_unset=True)
+            )
 
         if not updated_user:
             raise UserException(code=ResponseCode.USER_NOT_FOUND)
-        # return UserInfo.model_validate(updated_user)
-
-    @transactional
+        
     async def update_user_password(self, pwd_data: UserPwdAuth, user: User):
         log.info(f"{user.email}请求修改密码")
 
@@ -140,10 +154,11 @@ class UserService(TransactionMixin):
 
         SecurityUtil.validate_password_strength(pwd_data.new_pwd)
 
-        await self.repo.change_password(pwd_data.new_pwd, user)
+        async with self.transaction_scope():
+            await self.repo.change_password(pwd_data.new_pwd, user)
+
         log.info(f"{user.email}修改密码成功")
 
-    @transactional
     async def reset_user_password(self, user_request: UserPwdResetAuth):
         log.info(f"{user_request.email}请求重置密码")
 
@@ -152,5 +167,6 @@ class UserService(TransactionMixin):
 
         await self._verify_code(user_request.email, user_request.code)
         user = await self._get_user(email=user_request.email)
-        await self.repo.change_password(user_request.new_pwd, user)
+        async with self.transaction_scope():
+            await self.repo.change_password(user_request.new_pwd, user)
         log.info(f"{user.email}重置密码成功")

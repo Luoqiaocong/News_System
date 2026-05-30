@@ -23,5 +23,3 @@ async def upload_file(file: UploadFile):
         "http_status": result.status
     }
 
-
-Response

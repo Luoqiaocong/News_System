@@ -11,19 +11,18 @@ class NewsRepo:
     def __init__(self,db:AsyncSession=Depends(get_db)):
         self.db = db
 
-    async def get_categories(self, category_id: int | None):
+    async def get_categories(self, category_id: int=0):
         """
         获取新闻分类列表或单个分类详情。
 
-        :param category_id: 分类ID，如果提供则查询单个分类，否则查询所有分类
+        :param category_id: 分类ID，如果为0则获取所有分类，否则获取指定ID的分类
         :param db: 数据库会话
         :return: 分类对象列表
-        :raises HTTPException: 当未查找到任何分类时抛出404错误
         """
         if category_id:
-            category = await self.db.get(Category, category_id)
-            return [category] if category else []
-        return (await self.db.execute(select(Category))).scalars().all()
+            category = await self.db.get(Category, category_id)  
+            return [category] if category else []  # 返回单个分类的列表形式，方便统一处理
+        return (await self.db.execute(select(Category))).scalars().all()  # 获取所有分类并返回列表
 
     async def get_news(self, category_id: int, skip: int = 0, limit: int = 10):
         count_query = select(func.count(News.id))
@@ -108,7 +107,15 @@ class NewsRepo:
         result = (await db.execute(stmt)).scalar_one_or_none()
         return result is not None
     
-    async def search(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str],  offset: int, limit: int):
+    async def get_all_news_ids(self, category_id: int):
+        query = select(News.id)
+        if category_id:
+            query = query.where(News.category_id == category_id)
+        query = query.order_by(News.publish_time.desc())
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    async def search(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str], offset: int, limit: int):
         filters = []
         if query:
             filters.append(News.title.like(f'%{query}%'))

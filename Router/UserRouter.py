@@ -5,7 +5,7 @@ from starlette import status
 
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.UserSchema import UserInfo, UserToken, UserPwdAuth, RegisterUserRequest, \
+from Schemas.UserSchema import LogoutRequest, UserInfo, UserToken, UserPwdAuth, RegisterUserRequest, \
     LoginUserRequest, UserPwdResetAuth
 from Service import UserService
 from models.User import User
@@ -24,7 +24,7 @@ class UserPublicAPI:
     @router.post("/login", summary="用户登录", status_code=status.HTTP_200_OK)
     async def login(self, userdata: LoginUserRequest):
         token = await self.service.login_user(userdata)
-        return UserToken(token=token)
+        return token
 
     @router.post("/resetpwd", summary="重置密码", status_code=status.HTTP_200_OK)
     async def reset_pwd(self, user_request: UserPwdResetAuth):
@@ -61,3 +61,11 @@ class UserPrivateAPI:
     @router.put("/updatepwd", summary="更新密码", status_code=status.HTTP_200_OK)
     async def update_pwd(self, pwd_data: UserPwdAuth): # 更新密码
         await self.service.update_user_password(pwd_data, self.current_user)
+
+
+    @router.post("/logout", status_code=status.HTTP_200_OK)
+    async def logout_endpoint(self,
+    payload: LogoutRequest, 
+):
+        await self.service.logout_user(self.current_user.id, payload.refresh_token)
+       

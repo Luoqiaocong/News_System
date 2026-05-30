@@ -3,20 +3,17 @@ from typing import Annotated,  Optional
 from fastapi import BackgroundTasks, Query, Path
 from fastapi import APIRouter, Depends
 from fastapi_utils.cbv import cbv
-
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.NewsSchema import CategoryData
 from models.User import User
 from Service import NewsService
-from Utils.ResponseUtil import success_response
 
 router = APIRouter(prefix="/api/news", tags=["新闻模块"],route_class=UnifiedRoute)
 
 @cbv(router)
 class NewsRouterAPI:
     service :NewsService = Depends()
-    current_user :User = Depends(JWTAuth.get_current_user_optional)
+    current_user :Optional[User] = Depends(JWTAuth.get_current_user_optional)
 
     @router.get("/categories",summary="获取新闻分类")
     async def get_categories(self,

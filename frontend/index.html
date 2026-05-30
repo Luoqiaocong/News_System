@@ -577,7 +577,10 @@
           authLoading.value = true;
           try {
             const data = await UserAPI.login(loginForm.value);
-            if (data && data.token) { setToken(data.token); await loadUser(); showAuthModal.value = false; showToast('登录成功，欢迎回来！'); }
+            setTokens(data.access_token, data.refresh_token);
+            await loadUser();
+            showAuthModal.value = false;
+            showToast('登录成功，欢迎回来！');
           } catch (e) { showToast(e.message, 'error'); }
           finally { authLoading.value = false; }
         }
@@ -622,12 +625,20 @@
           catch (e) { showToast(e.message, 'error'); }
         }
 
-        function doLogout() { logout(); loggedIn.value = false; user.value = {}; showToast('已退出登录'); }
+        async function doLogout() {
+          const rt = getRefreshToken();
+          try { if (rt) await UserAPI.logout(rt); } catch (e) { /* 后端清理失败不影响前端登出 */ }
+          logout();
+          loggedIn.value = false;
+          user.value = {};
+          showToast('已退出登录');
+        }
 
         // --- User ---
         async function loadUser() {
-          try { user.value = await UserAPI.getInfo(); loggedIn.value = true; }
-          catch (e) { setToken(null); loggedIn.value = false; }
+          const userData = await loadUserData();
+          if (userData) { user.value = userData; loggedIn.value = true; }
+          else { setTokens(null, null); loggedIn.value = false; }
         }
 
         async function loadProfileStats() {
@@ -710,8 +721,7 @@
             await UserAPI.deleteAccount();
             confirmDeleteAccount.value = false;
             showProfileModal.value = false;
-            doLogout();
-            window.location.reload();
+            await doLogout();
           } catch (e) { showToast(e.message, 'error'); }
           finally { deletingAccount.value = false; }
         }

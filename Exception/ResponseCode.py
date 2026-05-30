@@ -48,7 +48,7 @@ class ResponseCode(Enum):
     # ========== 用户模块 (2xxxx) ==========
     USER_NOT_FOUND = (20001, "用户不存在")
     USER_EXIST = (20002, "用户已存在")
-    USER_PASSWORD_ERROR = (20003, "用户名或密码错误")
+    USER_LOGIN_FAILED = (20003, "用户名或密码错误")
     USER_ACCOUNT_DISABLED = (20004, "账户已被禁用")
     USER_REGISTER_FAILED = (20005, "注册失败，请稍后重试")
     USER_DELETE_FAILED = (20006, "注销失败，请稍后重试")

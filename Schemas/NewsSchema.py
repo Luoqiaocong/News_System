@@ -10,7 +10,7 @@ class CategoryData(BaseModel):
     name: str=Field(...,description="分类名称")
 
     model_config = {
-        "from_attributes": True
+        "from_attributes": True  # 允许从 ORM 对象创建模型实例
     }
 
 

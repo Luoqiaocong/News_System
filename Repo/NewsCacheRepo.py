@@ -19,8 +19,19 @@ class NewsCacheRepo:
         if not news_ids:
             return None, total
         detail_keys = [f"news:detail:{nid.decode('utf-8') if isinstance(nid, bytes) else nid}" for nid in news_ids]  # 构造对应的详情缓存键
-        news_detail_list = await redis_client.mget(*detail_keys)
+        news_detail_list = await redis_client.mget(*detail_keys)  # 批量获取新闻详情缓存（可能有 None）
         return news_detail_list, total
+
+    @staticmethod
+    async def set_news_list_cache(category_id: int, news_ids: list[int]):
+        zset_key = f"news:list:{category_id}" if category_id else "news:list:all"
+        if not news_ids:
+            await redis_client.zadd(zset_key, {"-1": 0})
+            await redis_client.expire(zset_key, 900)
+            return
+        mapping = {str(nid): nid for nid in news_ids}
+        await redis_client.zadd(zset_key, mapping)
+        await redis_client.expire(zset_key, 3600)
 
     # ========== 详情缓存（String） ==========
     @staticmethod

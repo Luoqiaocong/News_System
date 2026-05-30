@@ -233,7 +233,7 @@
 
           if (window.isLoggedIn()) {
             loggedIn.value = true;
-            try { user.value = await UserAPI.getInfo(); } catch (e) { setToken(null); loggedIn.value = false; }
+            try { user.value = await loadUserData(); } catch (e) { setTokens(null, null); loggedIn.value = false; }
           }
 
           await fetchDetail();
