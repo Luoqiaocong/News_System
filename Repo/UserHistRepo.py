@@ -25,6 +25,7 @@ class UserHistRepo:
             .values(viewed_at=now)
         )
         result = await self.db.execute(stmt)
+        await self.db.flush()
         return result.rowcount > 0  # type: ignore # 如果更新了记录，返回 True
 
     async def add_hist(self,news_id:int,user_id:int):
@@ -45,7 +46,7 @@ class UserHistRepo:
         
         query = delete(UserNewsHistory).where(UserNewsHistory.user_id == user_id,UserNewsHistory.news_id.in_(news_ids))
         res = await self.db.execute(query)
-        
+        await self.db.flush()
         return res.rowcount # type: ignore
 
     async def get(self,user_id:int,page:int,pagesize:int):

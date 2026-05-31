@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import Depends
 from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +17,7 @@ class UserFavRepo:
         self.db = db
 
     async def add(self, news_id: int, user_id: int):
-        fav = UserFavorite(user_id=user_id, news_id=news_id)
+        fav = UserFavorite(user_id=user_id, news_id=news_id,favorited_at=datetime.now())
         try:
             self.db.add(fav)
             await self.db.flush()
@@ -30,6 +32,7 @@ class UserFavRepo:
             UserFavorite.user_id == user_id
         )
         res = await self.db.execute(query)
+        await self.db.flush()
         return res.rowcount # type: ignore
 
     async def get(self, user_id: int, page: int, page_size: int):
@@ -55,4 +58,5 @@ class UserFavRepo:
     async def delete_all(self, user_id: int):
         query = delete(UserFavorite).where(UserFavorite.user_id == user_id)
         res = await self.db.execute(query)
+        await self.db.flush()
         return res.rowcount # type: ignore

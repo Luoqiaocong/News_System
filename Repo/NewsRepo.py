@@ -52,9 +52,6 @@ class NewsRepo:
         if not result:
             return None
 
-        # 刷新对象以确保获取最新数据
-        await self.db.refresh(result)
-
         return result  # 返回 ORM 对象，Service 层负责转换为 Pydantic 模型
 
     async def update_views(self, news_id: int):

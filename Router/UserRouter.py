@@ -63,7 +63,7 @@ class UserPrivateAPI:
         await self.service.update_user_password(pwd_data, self.current_user)
 
 
-    @router.post("/logout", status_code=status.HTTP_200_OK)
+    @router.post("/logout", status_code=status.HTTP_200_OK,summary="用户登出")
     async def logout_endpoint(self,
     payload: LogoutRequest, 
 ):

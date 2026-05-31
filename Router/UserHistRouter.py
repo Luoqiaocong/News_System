@@ -23,13 +23,13 @@ class UserHistRouter:
             news_ids: Annotated[list[int], Body(embed=True, description="新闻ID列表", min_length=1)],
     ):
         count = await self.service.delete_hists(self.current_user.id, news_ids)
-        return {"deleted_count": count}
+        return {"deleted_counts": count}
     
 
     @router.get("/", summary="获取浏览历史", status_code=status.HTTP_200_OK)
     async def get(
             self,
-            page: Annotated[int, Query(ge=1, description="页码", alias="page")],
+            page: Annotated[int, Query(ge=1, description="页码", alias="page")]=1,
             page_size: Annotated[int, Query(ge=1, description="每页数量", alias="pagesize")]=6,
     ):
         return await self.service.get_hists(self.current_user.id, page, page_size)
@@ -39,4 +39,4 @@ class UserHistRouter:
             self,
     ):
         count = await self.service.clear_hists(self.current_user.id)
-        return {"deleted_count": count}
+        return {"deleted_counts": count}

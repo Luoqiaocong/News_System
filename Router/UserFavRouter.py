@@ -28,8 +28,8 @@ class UserFavRouter:
         self,
         news_ids: Annotated[list[int], Body(embed=True, min_length=1, description="新闻ID列表")],
     ):
-        count = await self.service.remove_favorites(news_ids, self.current_user.id)
-        return {"deleted_count": count}
+        counts = await self.service.remove_favorites(news_ids, self.current_user.id)
+        return {"deleted_counts": counts}
 
     @router.get("/check/{news_id}", summary="检查新闻是否收藏", status_code=status.HTTP_200_OK)
     async def check(
@@ -45,10 +45,9 @@ class UserFavRouter:
         page: Annotated[int, Query(ge=1, description="页码")] = 1,
         page_size: Annotated[int, Query(ge=1, le=50, description="返回数据个数", alias="pagesize")] = 10,
     ):
-        data= await self.service.get_favorites(self.current_user.id, page, page_size)
-       
-        return data
+        return await self.service.get_favorites(self.current_user.id, page, page_size)
 
     @router.delete("/", status_code=status.HTTP_200_OK, summary="清空当前用户所有收藏")
     async def clear(self):
-        await self.service.clear_favorites(self.current_user.id)
+        counts = await self.service.clear_favorites(self.current_user.id)
+        return {"deleted_counts":counts}
