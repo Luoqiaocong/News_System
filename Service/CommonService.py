@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import random
 import string
 
@@ -42,10 +41,10 @@ class CommonService:
     async def refresh_token_endpoint(payload: RefreshRequest):
         user_id_hashed = payload.user_id
         user_id = get_real_id(user_id_hashed)
-        rt_md5 = hashlib.md5(payload.refresh_token.encode()).hexdigest()
+        refresh_token = payload.refresh_token
 
         redis_list_key = f"user:refresh_tokens:{user_id}"
-        blacklist_key = f"token:blacklist:{rt_md5}"
+        blacklist_key = f"token:blacklist:{refresh_token}"
 
         # 1. 安全防御 A：去黑名单看看这个 Token 是不是已经被别的设备挤下线了
         is_kicked = await redis_client.get(blacklist_key)
@@ -57,7 +56,7 @@ class CommonService:
 
         # 2. 安全防御 B：去用户的活跃列表中查看，确保它还在前三名里
         active_tokens = await redis_client.lrange(redis_list_key, 0, -1)
-        if rt_md5 not in active_tokens:
+        if refresh_token not in active_tokens:
             raise AuthException(
                 code=ResponseCode.TOKEN_EXPIRED,
                 msg="会话已过期，请重新登录"

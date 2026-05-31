@@ -1,5 +1,4 @@
 from functools import wraps
-import hashlib
 from typing import Annotated, Any, Callable, Coroutine
 
 from fastapi import Depends
@@ -88,16 +87,14 @@ class UserService(TransactionMixin):
     
     async def logout_user(self, user_id: int, refresh_token: str):
         """用户主动退出登录：抹杀 Token，并拉入黑名单防重放"""
-        rt_md5 = hashlib.md5(refresh_token.encode()).hexdigest()
-        
         redis_list_key = f"user:refresh_tokens:{user_id}"  
-        blacklist_key = f"token:blacklist:{rt_md5}"
+        blacklist_key = f"token:blacklist:{refresh_token}"
         
         # 黑名单寿命：完美覆盖 AccessToken 的存活期（15分钟 + 5分钟容错）
         safe_blacklist_ttl = (settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60) + 300
 
         #  从活跃设备列表中彻底剔除这台设备的 RefreshToken（剥夺继承权）
-        await redis_client.lrem(redis_list_key, 0, rt_md5)  # 0 表示删除所有匹配项，理论上应该只有一个
+        await redis_client.lrem(redis_list_key, 0, refresh_token)
 
         #  扔进黑名单，防止还没到期的旧 AccessToken 被前端 refresh 接口复活
         await redis_client.setex(blacklist_key, safe_blacklist_ttl, "logout")
