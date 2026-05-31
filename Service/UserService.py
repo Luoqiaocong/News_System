@@ -21,10 +21,10 @@ from models.User import User
 from Utils.RedisUtil import redis_client
 from Utils.TransactionMixin import TransactionMixin, transactional
 from Utils.SecurityUtil import PasswordManager
+from Utils.ServiceDecorator import HandlerServiceException
 
 
-
-
+@HandlerServiceException
 class UserService(TransactionMixin):
     _business_exception_type = UserException  # 注册为用户异常
 
@@ -90,20 +90,18 @@ class UserService(TransactionMixin):
         """用户主动退出登录：抹杀 Token，并拉入黑名单防重放"""
         rt_md5 = hashlib.md5(refresh_token.encode()).hexdigest()
         
-        redis_list_key = f"user:refresh_tokens:{user_id}"  # 如果是ZSET就是 user:refresh_zset:{user_id}
+        redis_list_key = f"user:refresh_tokens:{user_id}"  
         blacklist_key = f"token:blacklist:{rt_md5}"
         
         # 黑名单寿命：完美覆盖 AccessToken 的存活期（15分钟 + 5分钟容错）
-        safe_blacklist_ttl = (settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60) + 300 
-        
-        async with redis_client.pipeline() as pipe:
-            # 1. 🌟 从活跃设备列表中彻底剔除这台设备的 RefreshToken（剥夺继承权）
-            pipe.lrem(redis_list_key, 0, rt_md5)  # 如果用的是 ZSET，这里改用 pipe.zrem(redis_list_key, rt_md5)
-            
-            # 2. 🌟 扔进黑名单，防止黑客用可能还没到期的旧 AccessToken 被前端 refresh 接口复活
-            pipe.setex(blacklist_key, safe_blacklist_ttl, "logout")
-            
-            await pipe.execute()
+        safe_blacklist_ttl = (settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60) + 300
+
+        #  从活跃设备列表中彻底剔除这台设备的 RefreshToken（剥夺继承权）
+        await redis_client.lrem(redis_list_key, 0, rt_md5)  # 0 表示删除所有匹配项，理论上应该只有一个
+
+        #  扔进黑名单，防止还没到期的旧 AccessToken 被前端 refresh 接口复活
+        await redis_client.setex(blacklist_key, safe_blacklist_ttl, "logout")
+    
     
     async def delete_user(self, user_email: str):
         user = await self._get_user(email=user_email)
@@ -123,15 +121,15 @@ class UserService(TransactionMixin):
         # 头像上传处理
         avatar_file, user_avatar = user_update_info['avatar'][0], user_update_info['avatar'][1]
 
-        avatar_url = await upload_file(
-            file_model="avatar",
-            filepath=avatar_file
-        ) if avatar_file is not None else user_avatar
+        if avatar_file is not None:
+            avatar_url = await upload_file(file_model="avatar", filepath=avatar_file)
+        else:
+            avatar_url = user_avatar
 
         user_update_data = UserProfileUpdate(
             nickname=user_update_info.get('nickname'),
             bio=user_update_info.get('bio'),
-            avatar=HttpUrl(avatar_url) if avatar_url else user_avatar
+            avatar=HttpUrl(avatar_url) if avatar_url else user_avatar # 防止OSS上传失败导致的空字符串覆盖原有头像URL
         )
 
         async with self.transaction_scope():

@@ -13,7 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/user/login")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/user/login", auto_error=False)
 
 
-async def _verify_token_logic(token: str, repo: UserRepo) -> Optional[User]:
+async def _verify_token_logic(token: str, repo: UserRepo) -> User:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except ExpiredSignatureError:

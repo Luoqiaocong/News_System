@@ -5,7 +5,7 @@ from starlette import status
 
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.UserSchema import LogoutRequest, UserInfo, UserToken, UserPwdAuth, RegisterUserRequest, \
+from Schemas.UserSchema import LogoutRequest, UserInfo,UserPwdAuth, RegisterUserRequest, \
     LoginUserRequest, UserPwdResetAuth
 from Service import UserService
 from models.User import User

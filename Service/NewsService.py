@@ -12,6 +12,7 @@ from Utils.RedisUtil import redis_cache_decorator
 from Utils.TransactionMixin import TransactionMixin
 
 
+@HandlerServiceException
 class NewsService(TransactionMixin):
     _business_exception_type = NewsException  # 定义当前服务的业务异常类型，TransactionMixin 会根据这个类型来决定哪些异常需要回滚事务
 
@@ -33,14 +34,12 @@ class NewsService(TransactionMixin):
         key_prefix="news:categories:{category_id}",
         expire=7200,  # 2小时过期
     )
-    @HandlerServiceException(NewsException)
     async def get_news_categories(self,category_id:int=0) -> list[CategoryData]:  
         categories_orm = await self.repo.get_categories(category_id) # 从数据库获取分类数据
         if not categories_orm:
             raise NewsException(code=ResponseCode.NEWS_CATEGORY_NOT_FOUND)
         return [CategoryData.model_validate(c) for c in categories_orm]
 
-    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_list(self,category_id: int, page: int, page_size: int)->NewsListResponse:
         start = (page - 1) * page_size
         end = start + page_size - 1
@@ -75,7 +74,6 @@ class NewsService(TransactionMixin):
 
         raise NewsException(code=ResponseCode.NEWS_NOT_FOUND)
 
-    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def get_news_detail(self, news_id:int):
         # ====== 1. 新闻详情（先缓存，后 DB）======
         try:
@@ -126,7 +124,6 @@ class NewsService(TransactionMixin):
         return NewsDetailResponse(detail=NewsData.model_validate(detail_dict),related_news=[RelatedNewsCard.model_validate(r) for r in related])
     
 
-    @HandlerServiceException(NewsException)
     async def handle_news_view(
             self,
             news_id: int,
@@ -157,7 +154,6 @@ class NewsService(TransactionMixin):
                     await histrepo.add_hist(news_id, user_id)
                 await session.commit()
 
-    @HandlerServiceException(NewsException) # 捕获 NewsException，其他异常交由全局异常处理器
     async def search_news(self, query: str, category_id: int, start_date: Optional[str], end_date: Optional[str], page: int, page_size: int):
         
         start = (page - 1) * page_size

@@ -4,7 +4,7 @@ from sqlalchemy import update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from Config.DataBaseConfig import get_db
-from Schemas.UserSchema import UserRequest
+from Schemas.UserSchema import LoginUserRequest, RegisterUserRequest, UserRequest
 from models.User import User
 from Utils.SecurityUtil import PasswordManager
 
@@ -24,12 +24,12 @@ class UserRepo:
         if email:return await self._get_user_base(select(User).where(User.email == email))
         return None
 
-    async def create(self, userdata: UserRequest):
-        user = User(email=userdata.email, password=userdata.password)
+    async def create(self, userdata: RegisterUserRequest):
+        user = User(email=userdata.email, password=userdata.password, nickname=userdata.nickname)
         self.db.add(user)
         await self.db.flush()
 
-    async def login(self, userdata: UserRequest):
+    async def login(self, userdata: LoginUserRequest) -> User | None:
         stmt = select(User).where(User.email == userdata.email)
         result = await self.db.execute(stmt)
         user = result.scalar_one_or_none()

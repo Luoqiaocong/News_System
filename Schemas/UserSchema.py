@@ -16,6 +16,7 @@ class UserRequest(BaseModel):
 
 
 class RegisterUserRequest(UserRequest):
+    nickname: Annotated[str, Field(description="昵称", min_length=2, max_length=10)]
     code: Annotated[str, Field(description="验证码")] = None
 
 
@@ -40,14 +41,6 @@ class UserInfo(UserIdentity, UserProfileBase):
 
     model_config = {"from_attributes": True}
 
-
-class UserToken(BaseModel):
-    token: Annotated[str, Field(description="登录凭证")] = None
-
-    model_config = {
-        "from_attributes": True,
-        "populate_by_name": True
-    }
 
 
 class UserPwdAuth(BaseModel):

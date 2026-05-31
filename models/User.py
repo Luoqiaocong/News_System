@@ -45,11 +45,6 @@ class User(TimeStamp):
         comment="个人简介"
     )
 
-    token: Mapped[Optional[str]] = mapped_column(
-        String(255),
-        nullable=True,
-        comment="登录凭证"
-    )
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email})>"
