@@ -10,8 +10,9 @@ from Schemas.CommonSchema import RefreshRequest
 from Utils.LogUtil import log
 from Utils.RedisUtil import redis_client
 from Utils.EmailUtil import EmailHelper
+from Utils.ServiceDecorator import HandlerServiceException
 
-
+@HandlerServiceException
 class CommonService:
 
     @staticmethod

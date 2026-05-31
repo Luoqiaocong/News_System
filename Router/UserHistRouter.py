@@ -5,10 +5,11 @@ from fastapi_utils.cbv import cbv
 from starlette import status
 
 from Dependency import JWTAuth
+from Route.UnifiedRoute import UnifiedRoute
 from models.User import User
 from Service import UserHistService
 
-router = APIRouter(prefix="/api/user/news/hist", tags=["用户浏览历史"])
+router = APIRouter(prefix="/api/user/news/hist", tags=["用户浏览历史"],route_class=UnifiedRoute)
 
 
 @cbv(router)

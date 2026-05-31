@@ -5,10 +5,11 @@ from Config.DataBaseConfig import get_db
 from Exception.BusinessException import UserHistException
 from Repo.UserHistRepo import UserHistRepo
 from Schemas.UserHistSchema import HistoryNewsItem, UserHistResponse
+from Utils.ServiceDecorator import HandlerServiceException
 from Utils.TransactionMixin import TransactionMixin
 from Utils.SchemaUtil import rows_to_schema
 
-
+@HandlerServiceException
 class UserHistService(TransactionMixin):
     _business_exception_type = UserHistException
 
