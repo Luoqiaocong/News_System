@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/user/news/hist", tags=["用户浏览历史"],rou
 
 
 @cbv(router)
-class UserHistRouter:
+class UserHistRouterAPI:
     service: UserHistService = Depends()
     current_user: User = Depends(JWTAuth.get_current_user)
 

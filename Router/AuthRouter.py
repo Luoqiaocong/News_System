@@ -8,14 +8,14 @@ from starlette import status
 
 from Route.UnifiedRoute import UnifiedRoute
 from Schemas.CommonSchema import RefreshRequest, VerifyEmail
-from Service.CommonService import CommonService
+from Service import AuthService
 
 router = APIRouter(prefix="/api/auth",tags=['通用接口'], route_class=UnifiedRoute)
 
 @cbv(router)
-class CommonRouterAPI:
+class AuthRouterAPI:
 
-    service: CommonService = Depends()
+    service: AuthService = Depends()
 
     @router.post('/sendCode',status_code=status.HTTP_200_OK)
     async def send_code(self,email:VerifyEmail):

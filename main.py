@@ -5,7 +5,7 @@ from starlette.responses import RedirectResponse
 
 from Dependency.register_exception import register_exception
 from MIddleware import PerformanceMiddleware
-from Router import NewsRouter, UserRouter, UserFavRouter, UserHistRouter, CommonRouter
+from Router import AuthRouter, NewsRouter, UserRouter, UserFavRouter, UserHistRouter
 from Utils.LogUtil import init_log
 from Utils.RedisUtil import redis_client
 
@@ -24,7 +24,7 @@ app.include_router(NewsRouter.router)
 app.include_router(UserRouter.router)
 app.include_router(UserFavRouter.router)
 app.include_router(UserHistRouter.router)
-app.include_router(CommonRouter.router)
+app.include_router(AuthRouter.router)
 
 register_exception(app)
 app.add_middleware(PerformanceMiddleware)

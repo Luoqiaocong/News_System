@@ -13,7 +13,7 @@ from Utils.EmailUtil import EmailHelper
 from Utils.ServiceDecorator import HandlerServiceException
 
 @HandlerServiceException
-class CommonService:
+class AuthService:
 
     @staticmethod
     async def send_code(email: str):
@@ -22,7 +22,7 @@ class CommonService:
         await redis_client.set(key=f"user:verifyCode:{email}", value=code, expire=180)
 
         # 2. 后台发送邮件，不阻塞响应
-        asyncio.create_task(CommonService._do_send_email(email, code))
+        asyncio.create_task(AuthService._do_send_email(email, code))
 
         log.info(f"验证码已生成并存储，key: user:verifyCode:{email}")
 

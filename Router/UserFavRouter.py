@@ -11,7 +11,7 @@ from Service import UserFavService
 router = APIRouter(prefix="/api/user/news/fav", tags=["用户收藏"],route_class=UnifiedRoute)
 
 @cbv(router)
-class UserFavRouter:
+class UserFavRouterAPI:
 
     service: UserFavService = Depends()
     current_user: User = Depends(JWTAuth.get_current_user)
@@ -23,7 +23,7 @@ class UserFavRouter:
     ):
         await self.service.add_favorite(news_id, self.current_user.id)
 
-    @router.delete("/delete", status_code=status.HTTP_200_OK, summary="取消收藏")
+    @router.delete("/delete", status_code=status.HTTP_200_OK, summary="取消收藏")  # 删除收藏
     async def remove(
         self,
         news_ids: Annotated[list[int], Body(embed=True, min_length=1, description="新闻ID列表")],
@@ -50,4 +50,4 @@ class UserFavRouter:
     @router.delete("/", status_code=status.HTTP_200_OK, summary="清空当前用户所有收藏")
     async def clear(self):
         counts = await self.service.clear_favorites(self.current_user.id)
-        return {"deleted_counts":counts}
+        return {"deleted_counts":counts}  
