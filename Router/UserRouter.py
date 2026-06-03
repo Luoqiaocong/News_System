@@ -36,7 +36,7 @@ class UserPrivateAPI:
     service: UserService = Depends()
     current_user: User = Depends(JWTAuth.get_current_user)
 
-    @router.delete("/delete", summary="注销账户", status_code=status.HTTP_204_NO_CONTENT)
+    @router.delete("/delete", summary="注销账户", status_code=status.HTTP_200_OK)
     async def delete_account(self):
         await self.service.delete_user(self.current_user.email)
 

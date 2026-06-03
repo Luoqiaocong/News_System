@@ -133,7 +133,9 @@ async function request(url, options = {}) {
 
   if (!res.ok || (data.code && data.code !== 20000 && data.code !== 0 && data.code !== 20100)) {
     const message = data.message || data.detail || '请求失败';
-    throw new Error(message);
+    const err = new Error(message);
+    err.code = data.code;
+    throw err;
   }
 
   return data.data !== undefined ? data.data : data;

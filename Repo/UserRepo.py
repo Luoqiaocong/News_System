@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from fastapi import Depends
 from sqlalchemy import update, delete, select
@@ -80,8 +80,8 @@ class UserRepo:
         return user
 
     async def soft_delete(self, user_id: int):
-        query = update(User).where(User.id == user_id).values(deleted_at=datetime.now())
-        await self.db.execute(query)
+        query = update(User).where(User.id == user_id).values(deleted_at=datetime.now()+timedelta(days=14)) # 14天后自动删除
+        row = await self.db.execute(query)
         await self.db.flush()
         return row.rowcount > 0 # type: ignore
 

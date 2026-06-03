@@ -69,20 +69,20 @@ class UserService(TransactionMixin):
         async with self.transaction_scope():  # 开启事务，确保用户创建和后续操作的原子性
             await self.repo.create(userdata)
 
-    async def login_user(self, userdata: LoginUserRequest,confirm_restore:bool=False):
+    async def login_user(self, userdata: LoginUserRequest):
         user = await self.repo.login(userdata)
 
         if user is None or not PasswordManager.verify(userdata.password, user.password):
             raise UserException(code=ResponseCode.USER_LOGIN_FAILED)
         
         if user.deleted_at is not None : 
-            if not confirm_restore:
+            if not userdata.confirm_restore:
                 raise UserException(code=ResponseCode.USER_ACCOUNT_DEACTIVATING) # 返还给前端判断
         
             async with self.transaction_scope():  
                 user.deleted_at = None  # 原地复活
             log.info(f"'{user.email}'账户复活成功")
-            
+
         access_token = create_access_token({"sub": get_hashed_id(user.id)})
 
         refresh_token = create_refresh_token()

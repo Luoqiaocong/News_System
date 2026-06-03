@@ -114,7 +114,7 @@
 
         <!-- Login -->
         <div class="auth-form-container login">
-          <form class="auth-form" @submit.prevent="handleLogin" autocomplete="off">
+          <form class="auth-form" @submit.prevent="handleLogin()" autocomplete="off">
             <h2>登录</h2>
             <div class="form-group">
               <input v-model="loginForm.email" type="email" class="form-input" placeholder="电子邮箱" required />
@@ -360,6 +360,18 @@
       </div>
     </div>
 
+    <!-- ========== Account Recovery Confirm ========== -->
+    <div class="modal-overlay" v-if="showRecoverModal">
+      <div class="confirm-modal">
+        <h3>⚠️ 账户已注销</h3>
+        <p>此账户当前处于注销状态，是否需要恢复并登录？</p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" @click="showRecoverModal = false">取消</button>
+          <button class="btn btn-primary" @click="handleRecoverAccount">恢复并登录</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast -->
     <div v-if="toast.show" class="toast" :class="'toast-' + toast.type" @click="toast.show = false">{{ toast.message }}</div>
   </div>
@@ -416,6 +428,8 @@
         const pwdSaving = ref(false);
         const confirmDeleteAccount = ref(false);
         const deletingAccount = ref(false);
+        const showRecoverModal = ref(false);
+        const recoverForm = ref({ email: '', password: '' });
         const favCount = ref(0);
         const histCount = ref(0);
 
@@ -465,7 +479,7 @@
           return 'https://via.placeholder.com/38';
         });
         const anyModalOpen = computed(() =>
-          showAuthModal.value || showResetModal.value || showProfileModal.value || confirmDeleteAccount.value
+          showAuthModal.value || showResetModal.value || showProfileModal.value || confirmDeleteAccount.value || showRecoverModal.value
         );
         watch(anyModalOpen, v => { document.body.classList.toggle('modal-open', v); });
 
@@ -577,16 +591,27 @@
         function closeResetModal() { showResetModal.value = false; resetResetForm(); }
         function resetToLogin() { showResetModal.value = false; resetResetForm(); showAuth('login'); }
 
-        async function handleLogin() {
+        async function handleLogin(confirmRestore = false) {
           if (!loginForm.value.email || !loginForm.value.password) { showToast('请填写邮箱和密码', 'error'); return; }
           authLoading.value = true;
           try {
-            const data = await UserAPI.login(loginForm.value);
+            const payload = { email: loginForm.value.email, password: loginForm.value.password };
+            if (confirmRestore) payload.confirm_restore = true;
+            const data = await UserAPI.login(payload);
             setTokens(data.access_token, data.refresh_token);
             await loadUser();
+            showRecoverModal.value = false;
             showAuthModal.value = false;
             showToast('登录成功，欢迎回来！');
-          } catch (e) { showToast(e.message, 'error'); }
+          } catch (e) {
+            if (e.code === 20012) {
+              recoverForm.value = { email: loginForm.value.email, password: loginForm.value.password };
+              authLoading.value = false;
+              showRecoverModal.value = true;
+              return;
+            }
+            showToast(e.message, 'error');
+          }
           finally { authLoading.value = false; }
         }
 
@@ -729,8 +754,14 @@
             confirmDeleteAccount.value = false;
             showProfileModal.value = false;
             await doLogout();
+            window.location.reload();
           } catch (e) { showToast(e.message, 'error'); }
           finally { deletingAccount.value = false; }
+        }
+
+        async function handleRecoverAccount() {
+          showRecoverModal.value = false;
+          await handleLogin(true);
         }
 
         // --- Init ---
@@ -754,7 +785,7 @@
           resetForm, resetPwdVisible, resetPwdBlurred, resetPwdScore,
           showProfileModal, profileTab, profileForm, avatarFile, profileSaving,
           pwdForm, profileCurPwdVisible, profileNewPwdVisible, profilePwdScore, pwdSameError, pwdSaving,
-          confirmDeleteAccount, deletingAccount, favCount, histCount,
+          confirmDeleteAccount, deletingAccount, showRecoverModal, favCount, histCount,
           toast, totalPages, displayedPages, avatarSrc, strengthColors, strengthLabels, segColor,
           loginFormValid, regFormValid, resetFormValid, profilePwdValid,
           nicknameValid, emailValid, calcRegPwdStrength, calcResetPwdStrength, calcProfilePwdStrength,
@@ -763,7 +794,7 @@
           showAuth, closeAuthModal, closeResetModal, resetToLogin, doSearch, resetSearch,
           handleLogin, handleRegister, handleResetPwd, sendRegCode, sendResetCode, doLogout,
           openProfile, closeProfileModal, onAvatarFileChange, handleUpdateProfile,
-          switchToPwdTab, handleUpdatePwd, handleDeleteAccount,
+          switchToPwdTab, handleUpdatePwd, handleDeleteAccount, handleRecoverAccount,
         };
       },
     }).mount('#app');

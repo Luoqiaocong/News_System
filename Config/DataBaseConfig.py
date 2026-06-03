@@ -1,6 +1,6 @@
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine,async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, with_loader_criteria
+from sqlalchemy.orm import DeclarativeBase, Session, with_loader_criteria
 from Config.settings import settings
 
 
@@ -48,11 +48,9 @@ class Base(DeclarativeBase): # 必须使用同一个Base对象表之间才能相
 # 🌟 1. event.listens_for：这是 SQLAlchemy 的全局“物理外挂监听器”
 # 它告诉系统：只要有任何一个 AsyncSession 准备向 MySQL 发射 ORM 执行语句（"do_orm_execute"），
 # 在发射前的微秒级瞬间，立刻强行刹车，把这条语句丢进这个 _add_soft_delete_filter 函数里进行体检和改装！
-@event.listens_for(AsyncSession, "do_orm_execute")
+@event.listens_for(Session, "do_orm_execute")
 def _add_soft_delete_filter(execute_state):
-    """
-    SQLAlchemy 全局查询天网：负责自动对普通业务隐身注销用户，同时保留密码登录时的特殊穿透特权。
-    """
+    from models.User import User
     
     # 🌟 2. 检查本次查询有没有开启“阳间穿透特权”
     # 当你在登录或注册 Service 里写了 .execution_options(include_deleted=True) 时，
@@ -74,18 +72,5 @@ def _add_soft_delete_filter(execute_state):
         # with_loader_criteria：这是 SQLAlchemy 2.0 最顶级的“元编程全局过滤器”工具。
         # 它会在当前即将发射的 SQL 语句末尾，原子化地横空插入一段条件。
         execute_state.statement = execute_state.statement.options(
-            with_loader_criteria(
-                # 【第一步】：动态探测法（零导入、零肉体损耗）
-                # cls 代表当前这条 SQL 正在查询的表对象模型（比如可能是 User，也可能是 News）
-                # hasattr(cls, "deleted_at") 意思是：只要发现这个表里，包含了名为 "deleted_at" 的属性字段
-                lambda cls: hasattr(cls, "deleted_at"),  # type: ignore
-                
-                # 【第二步】：一旦满足上面的条件，强行在最终生成的 SQL 语句末尾拼接上这道大闸：
-                # WHERE 表名.deleted_at IS NULL
-                lambda cls: cls.deleted_at == None,
-                
-                # 【第三步】：include_aliases=True 意思是：哪怕你在写 SQL 时用了别名（比如 aliased(User)），
-                # 天网也会通过物理血缘追踪，精准把别名表也全部上锁，防漏率 100%。
-                include_aliases=True
-            )
+            with_loader_criteria(User, User.deleted_at == None, include_aliases=True)
         )

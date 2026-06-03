@@ -21,7 +21,7 @@ class RegisterUserRequest(UserRequest):
 
 
 class LoginUserRequest(UserRequest):
-    pass
+    confirm_restore: Annotated[bool, Field(description="是否确认恢复账户")] = False
 
 
 class UserProfileBase(BaseModel):
