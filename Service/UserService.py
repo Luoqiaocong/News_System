@@ -36,9 +36,9 @@ class UserService(TransactionMixin):
         self.repo = repo
         self.db = db
 
-    async def _get_user(self, *, email: str | None = None, user_id: int | None = None) -> User:
-        user = await self.repo.get_user_dynamic(user_id=user_id, email=email)
-        if not user:
+    async def _get_user(self, *, email: str | None = None, user_id: int | None = None,include_deleted: bool = False) -> User:
+        user = await self.repo.get_user_dynamic(user_id=user_id, email=email,include_deleted=include_deleted)  # 先查数据库，确保邮箱唯一   
+        if not user:    
             raise UserException(code=ResponseCode.USER_NOT_FOUND)
         return user
 
@@ -51,8 +51,11 @@ class UserService(TransactionMixin):
         await redis_client.delete(key)  # 验证码一次性使用，验证成功后立即删除
 
     async def create_user(self, userdata: RegisterUserRequest):
-        existing_user = await self.repo.get_user_dynamic(email=userdata.email)  # 先查数据库，确保邮箱唯一
+        existing_user = await self.repo.get_user_dynamic(email=userdata.email,include_deleted=True)  # 先查数据库，确保邮箱唯一
         if existing_user:
+            if existing_user.deleted_at is None:
+                raise UserException(code=ResponseCode.USER_EXIST)
+            
             raise UserException(code=ResponseCode.USER_EXIST)
 
         # 密码强度校验
@@ -66,12 +69,20 @@ class UserService(TransactionMixin):
         async with self.transaction_scope():  # 开启事务，确保用户创建和后续操作的原子性
             await self.repo.create(userdata)
 
-    async def login_user(self, userdata: LoginUserRequest):
+    async def login_user(self, userdata: LoginUserRequest,confirm_restore:bool=False):
         user = await self.repo.login(userdata)
 
         if user is None or not PasswordManager.verify(userdata.password, user.password):
             raise UserException(code=ResponseCode.USER_LOGIN_FAILED)
-
+        
+        if user.deleted_at is not None : 
+            if not confirm_restore:
+                raise UserException(code=ResponseCode.USER_ACCOUNT_DEACTIVATING) # 返还给前端判断
+        
+            async with self.transaction_scope():  
+                user.deleted_at = None  # 原地复活
+            log.info(f"'{user.email}'账户复活成功")
+            
         access_token = create_access_token({"sub": get_hashed_id(user.id)})
 
         refresh_token = create_refresh_token()
@@ -99,20 +110,16 @@ class UserService(TransactionMixin):
         #  扔进黑名单，防止还没到期的旧 AccessToken 被前端 refresh 接口复活
         await redis_client.setex(blacklist_key, safe_blacklist_ttl, "logout")
     
-    
     async def delete_user(self, user_email: str):
         user = await self._get_user(email=user_email)
-        '''
-        硬删除可能对用户操作不好，没有反悔机会，万一不小心注销了呢？
-        所以得使用软删除，具体就是在数据库表中加入is_delete（置为True）、delete_time字段
-        自动扫描数据库（FastAPI有这样的操作），当is_delete为True，delete_time时间也到了，那么就彻底删啦！
-        '''
         async with self.transaction_scope():
-            is_delete = await self.repo.delete(user.id)
+            is_delete = await self.repo.soft_delete(user.id)
         if not is_delete:
-            log.error(f"'{user.email}'注销账户失败")
+            log.error(f"'{user.email}'申请注销账户失败")
             raise UserException(code=ResponseCode.DATABASE_ERROR, msg="注销账户失败")
-        log.info(f"'{user.email}'注销账户成功")
+        
+        await redis_client.delete(f"user:refresh_tokens:{user.id}")  # 清空所有设备的 RefreshToken
+        log.info(f"'{user.email}'申请注销账户成功")
 
     async def update_user(self, user_update_info: dict[str, Any]):
         # 头像上传处理
@@ -165,3 +172,6 @@ class UserService(TransactionMixin):
         async with self.transaction_scope():
             await self.repo.change_password(user_request.new_pwd, user)
         log.info(f"{user.email}重置密码成功")
+
+
+        

@@ -49,7 +49,7 @@ class ResponseCode(Enum):
     USER_NOT_FOUND = (20001, "用户不存在")
     USER_EXIST = (20002, "用户已存在")
     USER_LOGIN_FAILED = (20003, "用户名或密码错误")
-    USER_ACCOUNT_DISABLED = (20004, "账户已被禁用")
+    USER_ACCOUNT_DISABLED = (20004, "账户注销冷却中")
     USER_REGISTER_FAILED = (20005, "注册失败，请稍后重试")
     USER_DELETE_FAILED = (20006, "注销失败，请稍后重试")
     USER_PWD_AUTH_FAILED = (20007, "密码验证失败")
@@ -57,6 +57,7 @@ class ResponseCode(Enum):
     USER_PWD_EMPTY = (20009, "密码不能为空")
     USER_PWD_WEAK = (20010, "密码需包含数字、大小写字母、特殊字符且至少8位")
     USER_PWD_SAME = (20011, "新密码不能与当前密码相同")
+    USER_ACCOUNT_DEACTIVATING = (20012, "账户当前在注销保护期中")
 
     # ========== 新闻模块 (3xxxx) ==========
     NEWS_NOT_FOUND = (30001, "新闻不存在")

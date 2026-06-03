@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from fastapi import Depends
 from sqlalchemy import update, delete, select
@@ -15,22 +16,41 @@ class UserRepo:
         self.db = db
 
     # 基础查询逻辑可以复用
-    async def _get_user_base(self, statement)-> User | None:
+    async def _get_user_base(self, statement, include_deleted: bool = False) -> User | None:
+        if include_deleted:
+            # 如果声明了需要穿透，就在语句上强行挂载特权信号
+            statement = statement.execution_options(include_deleted=True)
         result = await self.db.execute(statement)
         return result.scalar_one_or_none()
 
-    async def get_user_dynamic(self,user_id:int|None=None, email:str|None=None)-> User | None: # type: ignore
-        if user_id: return await self.db.get(User, user_id) # 这里警告是IDE误报，正常也是返回一个User对象
-        if email:return await self._get_user_base(select(User).where(User.email == email))
+    async def get_user_dynamic(
+        self, 
+        user_id: int | None = None, 
+        email: str | None = None, 
+        include_deleted: bool = False
+    ) -> User | None:
+        
+        # 【分支 A】：通过 user_id 查询
+        if user_id: 
+            # 注意：self.db.get() 默认不支持直接挂载 execution_options。
+            # 为了能够穿透查询被软删的 ID，统一用 select 语句改写，极其安全且标准
+            stmt = select(User).where(User.id == user_id)
+            return await self._get_user_base(stmt, include_deleted=include_deleted)
+            
+        # 【分支 B】：通过 email 查询
+        if email:
+            stmt = select(User).where(User.email == email)
+            return await self._get_user_base(stmt, include_deleted=include_deleted)
+            
         return None
 
     async def create(self, userdata: RegisterUserRequest):
-        user = User(email=userdata.email, password=userdata.password, nickname=userdata.nickname)
+        user = User(email=userdata.email, password=userdata.password, nickname=userdata.nickname,deleted_at=None)
         self.db.add(user)
         await self.db.flush()
 
     async def login(self, userdata: LoginUserRequest) -> User | None:
-        stmt = select(User).where(User.email == userdata.email)
+        stmt = select(User).where(User.email == userdata.email).execution_options(include_deleted=True)  # 登录查询必须穿透软删用户
         result = await self.db.execute(stmt)
         user = result.scalar_one_or_none()
         return user if user is not None else None
@@ -59,13 +79,16 @@ class UserRepo:
         # 4. 返回更新后的用户对象（此时 user 已经是最新状态）
         return user
 
-    async def delete(self, user_id: int):
-        query = delete(User).where(User.id == user_id)
-        row = await self.db.execute(query)
+    async def soft_delete(self, user_id: int):
+        query = update(User).where(User.id == user_id).values(deleted_at=datetime.now())
+        await self.db.execute(query)
         await self.db.flush()
         return row.rowcount > 0 # type: ignore
 
     async def change_password(self, new_pwd: str, user: User):
         user.password = PasswordManager.hash(new_pwd)
         await self.db.flush()
+
+    async def restore_user(self, user_email: str):
+        pass
 
