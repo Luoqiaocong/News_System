@@ -301,7 +301,7 @@
             </button>
           </form>
           <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--gray-200); text-align: center;">
-            <button class="btn btn-danger btn-sm" @click="confirmDeleteAccount = true" style="width:100%">注销账户</button>
+            <button class="btn btn-danger btn-sm" @click="openDeleteFlow" style="width:100%">注销账户</button>
           </div>
         </div>
 
@@ -346,17 +346,69 @@
       </div>
     </div>
 
-    <!-- ========== Delete Confirm ========== -->
-    <div class="modal-overlay" v-if="confirmDeleteAccount">
-      <div class="confirm-modal">
-        <h3>确认注销账户</h3>
-        <p>注销后所有数据将被永久删除，包括收藏和浏览历史。此操作不可撤销。</p>
-        <div class="modal-actions">
-          <button class="btn btn-ghost" @click="confirmDeleteAccount = false">取消</button>
-          <button class="btn btn-danger" @click="handleDeleteAccount" :disabled="deletingAccount">
+    <!-- ========== Delete Account Flow ========== -->
+    <div class="modal-overlay" v-if="showDeleteFlow">
+      <div class="profile-modal delete-flow">
+        <!-- Step 1: Notice -->
+        <template v-if="deleteStep === 1">
+          <button class="close-btn" @click="closeDeleteFlow">✕</button>
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;text-align:center">⚠️ 用户注销须知</h3>
+          <div class="delete-notice" ref="deleteNoticeRef" @scroll="onNoticeScroll">
+            <p style="text-align:center;color:var(--gray-600);margin-bottom:12px">尊贵的用户：</p>
+            <p>在您正式提交账户注销申请前，请您务必仔细阅读并充分理解本《用户注销须知》（以下简称"本须知"）。</p>
+            <p><strong>【特别提示】</strong>注销账户是一项影响您核心权益的高危操作。一旦注销流程彻底完成，您在该账户下的所有数据、资产及历史权益将无法找回。请您再次确认是否真的需要注销此账户。</p>
+            <p style="color:var(--gray-500);font-size:11px">当您勾选"我已阅读并知晓"、获取验证码并点击"确认注销"后，即视为您已阅读并同意本须知的全部内容。</p>
+
+            <h4>一、14天注销保护期（冷静期）说明</h4>
+            <p><strong>自动封锁：</strong>自您点击"确认注销"之日起，该账户将立即进入为期 14天 的注销保护期（冷静期）。在此期间，系统将限制该账户的正常登录与使用，该账户在前端系统将处于"实质性注销"状态。</p>
+            <p><strong>反悔与恢复：</strong>在 14天注销保护期内，如果您改变主意，可通过原登录渠道（使用原邮箱及密码）重新尝试登录。系统将为您触发"账户复活/取消注销"流程，经您二次确认后，可全量恢复您的原有数据并终止注销流程。</p>
+            <p><strong>物理销毁分水岭：</strong>若 14天保护期内您未进行任何登录和恢复操作，保护期满后，系统将视为您自愿放弃该账户，后端清道夫程序将依法对该账户发起不可逆的物理抹除。</p>
+
+            <h4>二、注销后的数据与权益处理</h4>
+            <p>保护期满、账户彻底注销后，您将放弃以下资产及权益，系统将执行如下格式化处理：</p>
+            <p><strong>身份信息移除：</strong>您的个人资料（包括但不限于头像、昵称、密码、绑定邮箱）将被彻底清除或进行去标识化匿名处理。</p>
+            <p><strong>业务数据粉碎：</strong>您在系统内累计产生的新闻收藏记录、浏览历史足迹、个性化推荐标签等全量关联数据将被从 MySQL 数据库中物理 DELETE（抹除）。</p>
+            <p><strong>重新注册视作新号：</strong>注销彻底完成后，该邮箱腾出的占位符允许被重新用于注册。但重新注册后，您将获得一个干净无污染的全新随机 ID 账户，上一次注销前的任何历史记录和资料皆不可复用。</p>
+
+            <h4>三、账户需满足的前置条件</h4>
+            <p><strong>账户状态正常：</strong>账户当前未处于封禁、冻结等异常状态（涉及违规被封禁审计的账户，需在处罚期满后方可申请）。</p>
+            <p><strong>无安全风险：</strong>该账户在近期内无密码高频修改、无异常异地登录等安全风险，确保是由您本人自主发起的真实意愿。</p>
+
+            <h4>四、合规与法律留存说明</h4>
+            <p>根据《中华人民共和国网络安全法》、《个人信息保护法》等相关法律法规的要求：</p>
+            <p>即使您的账户被物理抹除，系统根据法律强制性规定仍需在后台日志中妥善留存合规审计所需的网络日志（如注册记录、注销行为日志）不少于 6 个月。</p>
+            <p>该留存数据仅用于应对国家网信、公安等司法机关的合规审计与合规检查，绝不用于任何商业化或日常业务层面的展示和处理。</p>
+          </div>
+          <label class="delete-check" :class="{ ready: deleteScrolled }" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-500);margin-top:12px;cursor:pointer">
+            <input type="checkbox" v-model="deleteAgreed" :disabled="!deleteScrolled" />
+            我已阅读并知晓
+          </label>
+          <div style="text-align:center;margin-top:16px">
+            <button class="btn btn-primary" :disabled="!deleteAgreed" @click="deleteStep = 2">下一步</button>
+          </div>
+        </template>
+
+        <!-- Step 2: Verify code -->
+        <template v-if="deleteStep === 2">
+          <button class="close-btn" @click="closeDeleteFlow">✕</button>
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center">确认身份</h3>
+          <p style="text-align:center;color:var(--gray-500);font-size:13px;margin-bottom:16px">
+            验证码将发送至 <strong style="color:var(--gray-700)">{{ user.email }}</strong>
+          </p>
+          <div class="form-group">
+            <div class="form-row">
+              <input v-model="deleteForm.code" type="text" maxlength="6" class="form-input" placeholder="6位验证码" style="flex:1;text-align:center;letter-spacing:4px;font-size:18px" />
+              <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;border-radius:10px" :disabled="deleteCodeCountdown > 0" @click="sendDeleteCode">
+                {{ deleteCodeCountdown > 0 ? deleteCodeCountdown + 's' : '获取邮件验证码' }}
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-danger" style="width:100%;margin-top:12px"
+            :disabled="deleteForm.code.length !== 6 || deletingAccount"
+            @click="handleDeleteAccount">
             {{ deletingAccount ? '注销中...' : '确认注销' }}
           </button>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -428,6 +480,13 @@
         const pwdSaving = ref(false);
         const confirmDeleteAccount = ref(false);
         const deletingAccount = ref(false);
+        const showDeleteFlow = ref(false);
+        const deleteStep = ref(1);
+        const deleteForm = ref({ code: '' });
+        const deleteCodeCountdown = ref(0);
+        const deleteAgreed = ref(false);
+        const deleteScrolled = ref(false);
+        const deleteNoticeRef = ref(null);
         const showRecoverModal = ref(false);
         const recoverForm = ref({ email: '', password: '' });
         const favCount = ref(0);
@@ -479,7 +538,7 @@
           return 'https://via.placeholder.com/38';
         });
         const anyModalOpen = computed(() =>
-          showAuthModal.value || showResetModal.value || showProfileModal.value || confirmDeleteAccount.value || showRecoverModal.value
+          showAuthModal.value || showResetModal.value || showProfileModal.value || confirmDeleteAccount.value || showRecoverModal.value || showDeleteFlow.value
         );
         watch(anyModalOpen, v => { document.body.classList.toggle('modal-open', v); });
 
@@ -747,11 +806,33 @@
           finally { pwdSaving.value = false; }
         }
 
+        function openDeleteFlow() { showDeleteFlow.value = true; deleteStep.value = 1; deleteForm.value.code = ''; deleteCodeCountdown.value = 0; deleteAgreed.value = false; deleteScrolled.value = false; }
+        function closeDeleteFlow() { showDeleteFlow.value = false; }
+        function onNoticeScroll(e) {
+          if (!deleteScrolled.value) {
+            const el = e.target;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
+              deleteScrolled.value = true;
+            }
+          }
+        }
+
+        async function sendDeleteCode() {
+          if (!user.value || !user.value.email) return;
+          try {
+            await CommonAPI.sendCode(user.value.email);
+            deleteCodeCountdown.value = 60;
+            const t = setInterval(() => { deleteCodeCountdown.value--; if (deleteCodeCountdown.value <= 0) clearInterval(t); }, 1000);
+            showToast('验证码已发送');
+          } catch (e) { showToast(e.message, 'error'); }
+        }
+
         async function handleDeleteAccount() {
+          if (deleteForm.value.code.length !== 6) { showToast('请输入6位验证码', 'error'); return; }
           deletingAccount.value = true;
           try {
-            await UserAPI.deleteAccount();
-            confirmDeleteAccount.value = false;
+            await UserAPI.deleteAccount(deleteForm.value.code);
+            showDeleteFlow.value = false;
             showProfileModal.value = false;
             await doLogout();
             window.location.reload();
@@ -785,7 +866,9 @@
           resetForm, resetPwdVisible, resetPwdBlurred, resetPwdScore,
           showProfileModal, profileTab, profileForm, avatarFile, profileSaving,
           pwdForm, profileCurPwdVisible, profileNewPwdVisible, profilePwdScore, pwdSameError, pwdSaving,
-          confirmDeleteAccount, deletingAccount, showRecoverModal, favCount, histCount,
+          confirmDeleteAccount, deletingAccount, showDeleteFlow, deleteStep, deleteForm, deleteCodeCountdown,
+          deleteAgreed, deleteScrolled, deleteNoticeRef,
+          showRecoverModal, favCount, histCount,
           toast, totalPages, displayedPages, avatarSrc, strengthColors, strengthLabels, segColor,
           loginFormValid, regFormValid, resetFormValid, profilePwdValid,
           nicknameValid, emailValid, calcRegPwdStrength, calcResetPwdStrength, calcProfilePwdStrength,
@@ -795,6 +878,7 @@
           handleLogin, handleRegister, handleResetPwd, sendRegCode, sendResetCode, doLogout,
           openProfile, closeProfileModal, onAvatarFileChange, handleUpdateProfile,
           switchToPwdTab, handleUpdatePwd, handleDeleteAccount, handleRecoverAccount,
+          openDeleteFlow, closeDeleteFlow, sendDeleteCode, onNoticeScroll,
         };
       },
     }).mount('#app');

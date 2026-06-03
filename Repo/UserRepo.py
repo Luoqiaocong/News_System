@@ -80,7 +80,7 @@ class UserRepo:
         return user
 
     async def soft_delete(self, user_id: int):
-        query = update(User).where(User.id == user_id).values(deleted_at=datetime.now()+timedelta(days=14)) # 14天后自动删除
+        query = update(User).where(User.id == user_id).values(deleted_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         row = await self.db.execute(query)
         await self.db.flush()
         return row.rowcount > 0 # type: ignore
@@ -89,6 +89,9 @@ class UserRepo:
         user.password = PasswordManager.hash(new_pwd)
         await self.db.flush()
 
-    async def restore_user(self, user_email: str):
-        pass
+    async def delete_user(self, user_email: str):
+        stmt = delete(User).where(User.email == user_email)
+        row = await self.db.execute(stmt)
+        await self.db.flush()
+        return row.rowcount > 0 # type: ignore
 

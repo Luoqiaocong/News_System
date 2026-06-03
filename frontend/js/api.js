@@ -187,8 +187,8 @@ const UserAPI = {
   updatePwd(data) {
     return request('/api/user/updatepwd', { method: 'PUT', body: JSON.stringify(data) });
   },
-  deleteAccount() {
-    return request('/api/user/delete', { method: 'DELETE' });
+  deleteAccount(code) {
+    return request('/api/user/delete', { method: 'DELETE', body: JSON.stringify({ code }) });
   },
   logout(refreshToken) {
     return request('/api/user/logout', { method: 'POST', body: JSON.stringify({ refresh_token: refreshToken }) });

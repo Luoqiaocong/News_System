@@ -15,10 +15,19 @@ class UserRequest(BaseModel):
     password: Annotated[str, Field(description="密码", min_length=8)]
 
 
-class RegisterUserRequest(UserRequest):
-    nickname: Annotated[str, Field(description="昵称", min_length=2, max_length=10)]
-    code: Annotated[str, Field(description="验证码")] = None
+class UserCodeIdentity(BaseModel):
+    code: str = Field(
+        ..., 
+        min_length=6, 
+        max_length=6, 
+        pattern=r"^\d{6}$", 
+        description="6位纯数字邮件验证码"
+    )
 
+
+class RegisterUserRequest(UserRequest,UserCodeIdentity):
+    nickname: Annotated[str, Field(description="昵称", min_length=2, max_length=10)]
+    
 
 class LoginUserRequest(UserRequest):
     confirm_restore: Annotated[bool, Field(description="是否确认恢复账户")] = False
@@ -42,7 +51,6 @@ class UserInfo(UserIdentity, UserProfileBase):
     model_config = {"from_attributes": True}
 
 
-
 class UserPwdAuth(BaseModel):
     cur_pwd: Annotated[str, Field(description="现密码", min_length=8)]
     new_pwd: Annotated[str, Field(description="新密码", min_length=8)]
@@ -59,3 +67,7 @@ class UserPwdResetAuth(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str
+
+class DeleteAccountRequest(UserCodeIdentity):
+    pass
+      

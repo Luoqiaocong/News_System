@@ -1,3 +1,4 @@
+from codecs import code_page_encode
 from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi_utils.cbv import cbv
@@ -5,7 +6,7 @@ from starlette import status
 
 from Dependency import JWTAuth
 from Route.UnifiedRoute import UnifiedRoute
-from Schemas.UserSchema import LogoutRequest, UserInfo,UserPwdAuth, RegisterUserRequest, \
+from Schemas.UserSchema import DeleteAccountRequest, LogoutRequest, UserInfo,UserPwdAuth, RegisterUserRequest, \
     LoginUserRequest, UserPwdResetAuth
 from Service import UserService
 from models.User import User
@@ -37,8 +38,8 @@ class UserPrivateAPI:
     current_user: User = Depends(JWTAuth.get_current_user)
 
     @router.delete("/delete", summary="注销账户", status_code=status.HTTP_200_OK)
-    async def delete_account(self):
-        await self.service.delete_user(self.current_user.email)
+    async def delete_account(self,verify_code:DeleteAccountRequest):
+        await self.service.delete_user(self.current_user.email,verify_code.code)
 
     @router.get("/info", summary="获取用户信息", status_code=status.HTTP_200_OK)
     async def get_user_info(self):

@@ -110,8 +110,10 @@ class UserService(TransactionMixin):
         #  扔进黑名单，防止还没到期的旧 AccessToken 被前端 refresh 接口复活
         await redis_client.setex(blacklist_key, safe_blacklist_ttl, "logout")
     
-    async def delete_user(self, user_email: str):
+    async def delete_user(self, user_email: str,code:str):
         user = await self._get_user(email=user_email)
+        # 验证码校验
+        await self._verify_code(user_email, code)
         async with self.transaction_scope():
             is_delete = await self.repo.soft_delete(user.id)
         if not is_delete:
@@ -174,4 +176,4 @@ class UserService(TransactionMixin):
         log.info(f"{user.email}重置密码成功")
 
 
-        
+     

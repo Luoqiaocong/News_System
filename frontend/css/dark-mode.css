@@ -156,6 +156,13 @@
 [data-theme="dark"] .share-btn:hover {
   border-color: var(--primary);
 }
+[data-theme="dark"] .delete-notice {
+  background: var(--gray-100);
+  border-color: var(--gray-200);
+  color: var(--gray-400);
+}
+[data-theme="dark"] .delete-notice h4 { color: var(--gray-300); }
+[data-theme="dark"] .delete-notice strong { color: var(--danger); }
 [data-theme="dark"] .modal-overlay {
   background: rgba(0, 0, 0, 0.65);
 }
