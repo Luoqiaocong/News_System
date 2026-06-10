@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
 from Dependency.register_exception import register_exception
@@ -45,6 +46,8 @@ app.include_router(AuthRouter.router)
 
 register_exception(app)
 app.add_middleware(PerformanceMiddleware)
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")  # 静态资源路径映射
 
 
 # 允许跨域配置
